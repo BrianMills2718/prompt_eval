@@ -1,9 +1,12 @@
 """prompt_eval — A/B prompt testing and evaluation."""
 
 from prompt_eval.evaluators import (
+    EvalScore,
+    RubricDimension,
     contains_evaluator,
     exact_match_evaluator,
     kappa_evaluator,
+    llm_judge_dimensional_evaluator,
     llm_judge_evaluator,
 )
 from prompt_eval.experiment import (
@@ -56,6 +59,9 @@ __all__ = [
     "exact_match_evaluator",
     "contains_evaluator",
     "llm_judge_evaluator",
+    "llm_judge_dimensional_evaluator",
+    "EvalScore",
+    "RubricDimension",
     # Optimization
     "optimize",
     "grid_search",

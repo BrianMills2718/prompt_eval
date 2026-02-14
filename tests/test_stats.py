@@ -103,3 +103,43 @@ class TestCompareVariantsEdgeCases:
         assert isinstance(comp, ComparisonResult)
         assert comp.variant_a == "a"
         assert comp.variant_b == "b"
+
+
+class TestCompareByDimension:
+
+    def test_compare_specific_dimension(self):
+        """Compare variants on a specific dimension using dimension_scores."""
+        trials = [
+            Trial(variant_name="a", input_id="i1", output="x", score=0.7,
+                  dimension_scores={"clarity": 0.9, "depth": 0.5}),
+            Trial(variant_name="a", input_id="i2", output="x", score=0.7,
+                  dimension_scores={"clarity": 0.85, "depth": 0.55}),
+            Trial(variant_name="a", input_id="i3", output="x", score=0.7,
+                  dimension_scores={"clarity": 0.88, "depth": 0.52}),
+            Trial(variant_name="b", input_id="i1", output="x", score=0.6,
+                  dimension_scores={"clarity": 0.4, "depth": 0.8}),
+            Trial(variant_name="b", input_id="i2", output="x", score=0.6,
+                  dimension_scores={"clarity": 0.45, "depth": 0.75}),
+            Trial(variant_name="b", input_id="i3", output="x", score=0.6,
+                  dimension_scores={"clarity": 0.42, "depth": 0.78}),
+        ]
+        result = EvalResult(experiment_name="test", variants=["a", "b"], trials=trials)
+
+        # a is much better on clarity
+        comp = compare_variants(result, "a", "b", dimension="clarity")
+        assert comp.mean_a > comp.mean_b
+        assert comp.difference > 0.3
+
+        # b is better on depth
+        comp = compare_variants(result, "a", "b", dimension="depth")
+        assert comp.mean_b > comp.mean_a
+
+    def test_missing_dimension_raises(self):
+        """Requesting a dimension that no trial has raises ValueError."""
+        trials = [
+            Trial(variant_name="a", input_id="i1", output="x", score=0.7),
+            Trial(variant_name="b", input_id="i1", output="x", score=0.6),
+        ]
+        result = EvalResult(experiment_name="test", variants=["a", "b"], trials=trials)
+        with pytest.raises(ValueError, match="Need scores"):
+            compare_variants(result, "a", "b", dimension="nonexistent")

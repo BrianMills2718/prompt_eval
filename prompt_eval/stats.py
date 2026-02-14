@@ -31,6 +31,7 @@ def compare_variants(
     variant_b: str,
     confidence: float = 0.95,
     method: str = "bootstrap",
+    dimension: str | None = None,
 ) -> ComparisonResult:
     """Compare two variants from an experiment result.
 
@@ -40,18 +41,35 @@ def compare_variants(
         variant_b: Name of second variant.
         confidence: Confidence level for CI (default 0.95).
         method: "bootstrap" (default) or "welch" (Welch's t-test).
+        dimension: Optional dimension name to compare on (uses dimension_scores).
 
     Returns:
         ComparisonResult with means, difference, CI, and significance.
     """
-    scores_a = [
-        t.score for t in result.trials
-        if t.variant_name == variant_a and t.score is not None
-    ]
-    scores_b = [
-        t.score for t in result.trials
-        if t.variant_name == variant_b and t.score is not None
-    ]
+    if dimension is not None:
+        scores_a = [
+            t.dimension_scores[dimension]
+            for t in result.trials
+            if t.variant_name == variant_a
+            and t.dimension_scores is not None
+            and dimension in t.dimension_scores
+        ]
+        scores_b = [
+            t.dimension_scores[dimension]
+            for t in result.trials
+            if t.variant_name == variant_b
+            and t.dimension_scores is not None
+            and dimension in t.dimension_scores
+        ]
+    else:
+        scores_a = [
+            t.score for t in result.trials
+            if t.variant_name == variant_a and t.score is not None
+        ]
+        scores_b = [
+            t.score for t in result.trials
+            if t.variant_name == variant_b and t.score is not None
+        ]
 
     if not scores_a or not scores_b:
         raise ValueError(

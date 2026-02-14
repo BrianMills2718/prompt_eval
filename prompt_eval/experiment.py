@@ -29,6 +29,12 @@ class Trial(BaseModel):
     input_id: str
     output: Any = Field(description="Raw LLM output (string or parsed model)")
     score: Optional[float] = Field(default=None, description="Metric score if evaluator provided")
+    dimension_scores: Optional[Dict[str, float]] = Field(
+        default=None, description="Per-dimension scores from dimensional evaluator"
+    )
+    reasoning: Optional[str] = Field(
+        default=None, description="Judge reasoning from dimensional evaluator"
+    )
     cost: float = Field(default=0.0)
     latency_ms: float = Field(default=0.0)
     tokens_used: int = Field(default=0)
@@ -52,6 +58,9 @@ class VariantSummary(BaseModel):
     n_errors: int = 0
     mean_score: Optional[float] = None
     std_score: Optional[float] = None
+    dimension_means: Optional[Dict[str, float]] = Field(
+        default=None, description="Per-dimension mean scores across trials"
+    )
     mean_cost: float = 0.0
     mean_latency_ms: float = 0.0
     total_tokens: int = 0

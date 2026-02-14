@@ -10,6 +10,7 @@ from typing import Any, Callable, Optional
 
 from llm_client import acall_llm, acall_llm_structured
 
+from prompt_eval.evaluators import EvalScore
 from prompt_eval.experiment import (
     EvalResult,
     Experiment,
@@ -82,22 +83,32 @@ async def _run_single_trial(
                 **variant.kwargs,
             )
         else:
-            result, meta = await acall_llm(
+            meta = await acall_llm(
                 variant.model,
                 messages,
                 temperature=variant.temperature,
                 **variant.kwargs,
             )
+            result = meta.content
 
         latency_ms = (time.monotonic() - start) * 1000
 
         score = None
+        dimension_scores = None
+        reasoning = None
         if evaluator is not None:
             try:
                 if inspect.iscoroutinefunction(evaluator):
-                    score = await evaluator(result, inp.expected)
+                    eval_result = await evaluator(result, inp.expected)
                 else:
-                    score = evaluator(result, inp.expected)
+                    eval_result = evaluator(result, inp.expected)
+
+                if isinstance(eval_result, EvalScore):
+                    score = eval_result.score
+                    dimension_scores = eval_result.dimension_scores
+                    reasoning = eval_result.reasoning
+                elif isinstance(eval_result, (int, float)):
+                    score = float(eval_result)
             except Exception as e:
                 logger.warning("Evaluator failed for %s/%s: %s", variant.name, inp.id, e)
 
@@ -106,6 +117,8 @@ async def _run_single_trial(
             input_id=inp.id,
             output=result,
             score=score,
+            dimension_scores=dimension_scores,
+            reasoning=reasoning,
             cost=meta.cost,
             latency_ms=latency_ms,
             tokens_used=meta.usage.get("total_tokens", 0) if meta.usage else 0,
@@ -143,12 +156,26 @@ def _build_summaries(
         scores = [t.score for t in variant_trials if t.score is not None]
         errors = [t for t in variant_trials if t.error is not None]
 
+        # Aggregate dimension scores
+        dimension_means = None
+        dim_trials = [t for t in variant_trials if t.dimension_scores is not None]
+        if dim_trials:
+            all_dims: dict[str, list[float]] = {}
+            for t in dim_trials:
+                for dim_name, dim_score in t.dimension_scores.items():
+                    all_dims.setdefault(dim_name, []).append(dim_score)
+            dimension_means = {
+                dim_name: statistics.mean(dim_scores)
+                for dim_name, dim_scores in all_dims.items()
+            }
+
         summaries[name] = VariantSummary(
             variant_name=name,
             n_trials=len(variant_trials),
             n_errors=len(errors),
             mean_score=statistics.mean(scores) if scores else None,
             std_score=statistics.stdev(scores) if len(scores) >= 2 else None,
+            dimension_means=dimension_means,
             mean_cost=(
                 statistics.mean(t.cost for t in variant_trials if t.error is None)
                 if any(t.error is None for t in variant_trials)

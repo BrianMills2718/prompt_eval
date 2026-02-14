@@ -1,8 +1,10 @@
 """Tests for experiment runner."""
 
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from llm_client import LLMCallResult
 
 from prompt_eval.experiment import (
     Experiment,
@@ -10,6 +12,7 @@ from prompt_eval.experiment import (
     PromptVariant,
     Trial,
 )
+from prompt_eval.evaluators import EvalScore
 from prompt_eval.runner import run_experiment, _substitute_input, _build_summaries
 
 
@@ -94,9 +97,8 @@ class TestRunExperiment:
 
     @pytest.mark.asyncio
     async def test_runs_all_combinations(self, simple_experiment):
-        mock_meta = MagicMock(cost=0.001, usage={"total_tokens": 50})
         with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
-            mock_llm.return_value = ("summary text", mock_meta)
+            mock_llm.return_value = LLMCallResult(content="summary text", usage={"total_tokens": 50}, cost=0.001, model="test")
 
             result = await run_experiment(simple_experiment)
 
@@ -107,9 +109,8 @@ class TestRunExperiment:
 
     @pytest.mark.asyncio
     async def test_with_evaluator(self, simple_experiment):
-        mock_meta = MagicMock(cost=0.001, usage={"total_tokens": 50})
         with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
-            mock_llm.return_value = ("summary text", mock_meta)
+            mock_llm.return_value = LLMCallResult(content="summary text", usage={"total_tokens": 50}, cost=0.001, model="test")
 
             evaluator = lambda output, expected: 0.85
             result = await run_experiment(simple_experiment, evaluator=evaluator)
@@ -135,7 +136,7 @@ class TestRunExperiment:
             response_model=Summary,
         )
 
-        mock_meta = MagicMock(cost=0.001, usage={"total_tokens": 50})
+        mock_meta = LLMCallResult(content="", usage={"total_tokens": 50}, cost=0.001, model="test")
         with patch("prompt_eval.runner.acall_llm_structured", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = (Summary(text="result"), mock_meta)
 
@@ -157,9 +158,8 @@ class TestRunExperiment:
 
     @pytest.mark.asyncio
     async def test_evaluator_error_doesnt_crash(self, simple_experiment):
-        mock_meta = MagicMock(cost=0.001, usage={"total_tokens": 50})
         with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
-            mock_llm.return_value = ("text", mock_meta)
+            mock_llm.return_value = LLMCallResult(content="text", usage={"total_tokens": 50}, cost=0.001, model="test")
 
             def bad_evaluator(output, expected):
                 raise ValueError("eval broke")
@@ -173,9 +173,8 @@ class TestRunExperiment:
     @pytest.mark.asyncio
     async def test_async_evaluator(self, simple_experiment):
         """Async evaluators (like llm_judge_evaluator) are awaited correctly."""
-        mock_meta = MagicMock(cost=0.001, usage={"total_tokens": 50})
         with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
-            mock_llm.return_value = ("summary text", mock_meta)
+            mock_llm.return_value = LLMCallResult(content="summary text", usage={"total_tokens": 50}, cost=0.001, model="test")
 
             async def async_eval(output, expected):
                 return 0.75
@@ -184,3 +183,45 @@ class TestRunExperiment:
 
         for trial in result.trials:
             assert trial.score == 0.75
+
+    @pytest.mark.asyncio
+    async def test_eval_score_populates_dimensions(self, simple_experiment):
+        """EvalScore from dimensional evaluator populates Trial fields."""
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(content="text", usage={"total_tokens": 50}, cost=0.001, model="test")
+
+            async def dim_eval(output, expected):
+                return EvalScore(
+                    score=0.65,
+                    dimension_scores={"clarity": 0.8, "depth": 0.5},
+                    reasoning="Good clarity, weak depth.",
+                )
+
+            result = await run_experiment(simple_experiment, evaluator=dim_eval)
+
+        for trial in result.trials:
+            assert trial.score == 0.65
+            assert trial.dimension_scores == {"clarity": 0.8, "depth": 0.5}
+            assert trial.reasoning == "Good clarity, weak depth."
+
+        # Check summary aggregates dimension means
+        for summary in result.summary.values():
+            assert summary.dimension_means is not None
+            assert summary.dimension_means["clarity"] == pytest.approx(0.8)
+            assert summary.dimension_means["depth"] == pytest.approx(0.5)
+
+    @pytest.mark.asyncio
+    async def test_float_evaluator_no_dimensions(self, simple_experiment):
+        """Plain float evaluators still work — dimensions stay None."""
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(content="text", usage={"total_tokens": 50}, cost=0.001, model="test")
+
+            result = await run_experiment(simple_experiment, evaluator=lambda o, e: 0.9)
+
+        for trial in result.trials:
+            assert trial.score == 0.9
+            assert trial.dimension_scores is None
+            assert trial.reasoning is None
+
+        for summary in result.summary.values():
+            assert summary.dimension_means is None

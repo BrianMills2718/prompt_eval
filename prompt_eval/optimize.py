@@ -260,13 +260,13 @@ async def instruction_search(
             f"Keep the {{input}} placeholder if present.\n\n"
             f"Original instruction:\n{current_best_instruction}"
         )
-        rewrite_response, _ = await acall_llm(
+        rewrite_result = await acall_llm(
             rewrite_model,
             [{"role": "user", "content": rewrite_prompt}],
         )
 
         # Parse rewrites (split on ---)
-        rewrites = [r.strip() for r in str(rewrite_response).split("---") if r.strip()]
+        rewrites = [r.strip() for r in rewrite_result.content.split("---") if r.strip()]
         rewrites = rewrites[:n_rewrites]  # cap at n_rewrites
 
         if not rewrites:

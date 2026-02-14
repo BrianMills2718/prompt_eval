@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from llm_client import LLMCallResult
+
 fastmcp = pytest.importorskip("fastmcp")
 
 from prompt_eval.experiment import (
@@ -48,10 +50,7 @@ def _make_result(name: str = "test_exp") -> EvalResult:
 @pytest.fixture
 def mock_llm():
     with patch("prompt_eval.runner.acall_llm") as mock:
-        meta = AsyncMock()
-        meta.cost = 0.001
-        meta.usage = {"total_tokens": 50}
-        mock.return_value = ("mock output", meta)
+        mock.return_value = LLMCallResult(content="mock output", usage={"total_tokens": 50}, cost=0.001, model="test")
         yield mock
 
 
@@ -91,7 +90,7 @@ class TestRunExperimentTool:
             n_runs=1,
         )
         # Mock returns a list (kappa evaluator expects list output)
-        mock_llm.return_value = (["code_a", "code_b"], mock_llm.return_value[1])
+        mock_llm.return_value = LLMCallResult(content=["code_a", "code_b"], usage={"total_tokens": 50}, cost=0.001, model="test")
         result = await _run_experiment_impl(exp.model_dump_json(), evaluator_name="kappa")
         assert result["experiment_name"] == "kappa_test"
         assert result["summary"]["v1"]["mean_score"] == 1.0
@@ -107,7 +106,7 @@ class TestRunExperimentTool:
         )
         # mock acall_llm for both the experiment run AND the judge call
         with patch("prompt_eval.evaluators.acall_llm", new_callable=AsyncMock) as mock_judge:
-            mock_judge.return_value = ("0.85", AsyncMock())
+            mock_judge.return_value = LLMCallResult(content="85", usage={"total_tokens": 100}, cost=0.001, model="test")
             result = await _run_experiment_impl(
                 exp.model_dump_json(),
                 evaluator_name="llm_judge",
@@ -177,7 +176,7 @@ class TestEvaluateOutput:
     async def test_llm_judge(self) -> None:
         # mock-ok: testing tool orchestration, not actual LLM judge quality
         with patch("prompt_eval.evaluators.acall_llm", new_callable=AsyncMock) as mock_judge:
-            mock_judge.return_value = ("0.9", AsyncMock())
+            mock_judge.return_value = LLMCallResult(content="90", usage={"total_tokens": 100}, cost=0.001, model="test")
             result = await _evaluate_output_impl(
                 "some output", "llm_judge", rubric="Is it good?"
             )

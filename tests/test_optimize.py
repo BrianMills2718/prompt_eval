@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from llm_client import LLMCallResult
+
 from prompt_eval.experiment import ExperimentInput
 from prompt_eval.optimize import (
     FewShotPool,
@@ -36,10 +38,7 @@ def _score_by_model(output, expected=None) -> float:
 @pytest.fixture
 def mock_llm():
     with patch("prompt_eval.runner.acall_llm") as mock:
-        meta = AsyncMock()
-        meta.cost = 0.001
-        meta.usage = {"total_tokens": 50}
-        mock.return_value = ("mock output", meta)
+        mock.return_value = LLMCallResult(content="mock output", usage={"total_tokens": 50}, cost=0.001, model="test")
         yield mock
 
 
@@ -63,13 +62,10 @@ class TestGridSearch:
         async def varying_llm(*args, **kwargs):
             nonlocal call_count
             call_count += 1
-            meta = AsyncMock()
-            meta.cost = 0.001
-            meta.usage = {"total_tokens": 50}
             # First template's calls return "bad", second's return "good"
             if call_count <= 1:
-                return ("bad output", meta)
-            return ("good output", meta)
+                return LLMCallResult(content="bad output", usage={"total_tokens": 50}, cost=0.001, model="test")
+            return LLMCallResult(content="good output", usage={"total_tokens": 50}, cost=0.001, model="test")
 
         mock_llm.side_effect = varying_llm
 
@@ -166,10 +162,7 @@ class TestInstructionSearch:
         """Instruction search evaluates base + rewrites."""
         # mock-ok: testing orchestration, not rewrite quality
         with patch("prompt_eval.optimize.acall_llm") as rewrite_mock:
-            rewrite_meta = AsyncMock()
-            rewrite_meta.cost = 0.0
-            rewrite_meta.usage = {"total_tokens": 10}
-            rewrite_mock.return_value = ("rewrite_a\n---\nrewrite_b", rewrite_meta)
+            rewrite_mock.return_value = LLMCallResult(content="rewrite_a\n---\nrewrite_b", usage={"total_tokens": 10}, cost=0.0, model="test")
 
             result = await instruction_search(
                 base_instruction="do the thing: {input}",
@@ -188,10 +181,7 @@ class TestInstructionSearch:
     async def test_no_rewrites_generated(self, mock_llm) -> None:
         """If LLM returns empty rewrites, search continues without crashing."""
         with patch("prompt_eval.optimize.acall_llm") as rewrite_mock:
-            rewrite_meta = AsyncMock()
-            rewrite_meta.cost = 0.0
-            rewrite_meta.usage = {"total_tokens": 10}
-            rewrite_mock.return_value = ("", rewrite_meta)  # empty
+            rewrite_mock.return_value = LLMCallResult(content="", usage={"total_tokens": 10}, cost=0.0, model="test")  # empty
 
             result = await instruction_search(
                 base_instruction="do the thing: {input}",
@@ -235,10 +225,7 @@ class TestOptimize:
     async def test_instruction_search_strategy(self, mock_llm) -> None:
         space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
         with patch("prompt_eval.optimize.acall_llm") as rewrite_mock:
-            rewrite_meta = AsyncMock()
-            rewrite_meta.cost = 0.0
-            rewrite_meta.usage = {"total_tokens": 10}
-            rewrite_mock.return_value = ("rewrite_a", rewrite_meta)
+            rewrite_mock.return_value = LLMCallResult(content="rewrite_a", usage={"total_tokens": 10}, cost=0.0, model="test")
 
             result = await optimize(
                 space, _make_inputs(), _always_one,
