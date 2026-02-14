@@ -15,7 +15,7 @@ from fastmcp import FastMCP
 
 from prompt_eval.evaluators import contains_evaluator, exact_match_evaluator
 from prompt_eval.experiment import Experiment
-from prompt_eval.runner import run_experiment
+from prompt_eval.runner import run_experiment as _run_experiment
 from prompt_eval.stats import compare_variants
 from prompt_eval.store import list_results, load_result, save_result
 
@@ -29,17 +29,14 @@ _BUILTIN_EVALUATORS: dict[str, Any] = {
 }
 
 
-@mcp.tool
-async def run_experiment_tool(
+# --- Core logic (testable without MCP) ---
+
+
+async def _run_experiment_impl(
     experiment_json: str,
     evaluator_name: str | None = None,
 ) -> dict:
-    """Run a prompt experiment and save the results.
-
-    Args:
-        experiment_json: JSON string of an Experiment definition.
-        evaluator_name: Optional built-in evaluator name ("exact_match" or "contains").
-    """
+    """Run a prompt experiment and save the results."""
     experiment = Experiment.model_validate_json(experiment_json)
 
     evaluator = None
@@ -48,7 +45,7 @@ async def run_experiment_tool(
         if evaluator is None:
             return {"error": f"Unknown evaluator: {evaluator_name}. Available: {list(_BUILTIN_EVALUATORS)}"}
 
-    result = await run_experiment(experiment, evaluator=evaluator)
+    result = await _run_experiment(experiment, evaluator=evaluator)
     path = save_result(result)
 
     return {
@@ -60,17 +57,11 @@ async def run_experiment_tool(
     }
 
 
-@mcp.tool
-async def get_result(
+async def _get_result_impl(
     experiment_name: str | None = None,
     path: str | None = None,
 ) -> dict:
-    """Load experiment results — most recent by name, or a specific file.
-
-    Args:
-        experiment_name: Load the most recent result for this experiment.
-        path: Load a specific result file by path.
-    """
+    """Load experiment results — most recent by name, or a specific file."""
     if path is not None:
         result = load_result(Path(path))
         return result.model_dump()
@@ -85,11 +76,9 @@ async def get_result(
     return {"error": "Provide either experiment_name or path"}
 
 
-@mcp.tool
-async def list_experiments() -> dict:
+async def _list_experiments_impl() -> dict:
     """List all experiment directories and result files."""
     all_results = list_results()
-    # Group by experiment (parent directory name)
     experiments: dict[str, list[str]] = {}
     for p in all_results:
         exp_name = p.parent.name
@@ -99,6 +88,66 @@ async def list_experiments() -> dict:
         "experiments": experiments,
         "total_results": len(all_results),
     }
+
+
+async def _compare_impl(
+    path: str,
+    variant_a: str,
+    variant_b: str,
+    method: str = "bootstrap",
+) -> dict:
+    """Compare two variants from a saved result."""
+    result = load_result(Path(path))
+    comparison = compare_variants(result, variant_a, variant_b, method=method)
+    return {
+        "variant_a": comparison.variant_a,
+        "variant_b": comparison.variant_b,
+        "mean_a": comparison.mean_a,
+        "mean_b": comparison.mean_b,
+        "difference": comparison.difference,
+        "ci_lower": comparison.ci_lower,
+        "ci_upper": comparison.ci_upper,
+        "significant": comparison.significant,
+        "method": comparison.method,
+        "detail": comparison.detail,
+    }
+
+
+# --- MCP tool registration ---
+
+
+@mcp.tool
+async def run_experiment_tool(
+    experiment_json: str,
+    evaluator_name: str | None = None,
+) -> dict:
+    """Run a prompt experiment and save the results.
+
+    Args:
+        experiment_json: JSON string of an Experiment definition.
+        evaluator_name: Optional built-in evaluator name ("exact_match" or "contains").
+    """
+    return await _run_experiment_impl(experiment_json, evaluator_name)
+
+
+@mcp.tool
+async def get_result(
+    experiment_name: str | None = None,
+    path: str | None = None,
+) -> dict:
+    """Load experiment results — most recent by name, or a specific file.
+
+    Args:
+        experiment_name: Load the most recent result for this experiment.
+        path: Load a specific result file by path.
+    """
+    return await _get_result_impl(experiment_name, path)
+
+
+@mcp.tool
+async def list_experiments() -> dict:
+    """List all experiment directories and result files."""
+    return await _list_experiments_impl()
 
 
 @mcp.tool
@@ -116,20 +165,7 @@ async def compare(
         variant_b: Name of second variant.
         method: "bootstrap" (default) or "welch".
     """
-    result = load_result(Path(path))
-    comparison = compare_variants(result, variant_a, variant_b, method=method)
-    return {
-        "variant_a": comparison.variant_a,
-        "variant_b": comparison.variant_b,
-        "mean_a": comparison.mean_a,
-        "mean_b": comparison.mean_b,
-        "difference": comparison.difference,
-        "ci_lower": comparison.ci_lower,
-        "ci_upper": comparison.ci_upper,
-        "significant": comparison.significant,
-        "method": comparison.method,
-        "detail": comparison.detail,
-    }
+    return await _compare_impl(path, variant_a, variant_b, method)
 
 
 def main() -> None:

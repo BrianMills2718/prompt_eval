@@ -17,7 +17,12 @@ from prompt_eval.experiment import (
     Trial,
     VariantSummary,
 )
-from prompt_eval.mcp_server import compare, get_result, list_experiments, run_experiment_tool
+from prompt_eval.mcp_server import (
+    _compare_impl,
+    _get_result_impl,
+    _list_experiments_impl,
+    _run_experiment_impl,
+)
 from prompt_eval.store import save_result
 
 
@@ -52,7 +57,6 @@ def mock_llm():
 class TestRunExperimentTool:
     async def test_runs_and_saves(self, mock_llm, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("prompt_eval.store._DEFAULT_BASE", tmp_path)
-        monkeypatch.setattr("prompt_eval.mcp_server.save_result", lambda r, **kw: save_result(r, **kw))
 
         exp = Experiment(
             name="mcp_test",
@@ -60,7 +64,7 @@ class TestRunExperimentTool:
             inputs=[ExperimentInput(id="i1", content="hi")],
             n_runs=1,
         )
-        result = await run_experiment_tool(exp.model_dump_json())
+        result = await _run_experiment_impl(exp.model_dump_json())
         assert result["experiment_name"] == "mcp_test"
         assert result["n_trials"] == 1
         assert "saved_to" in result
@@ -72,25 +76,25 @@ class TestRunExperimentTool:
             inputs=[ExperimentInput(id="i1", content="hi")],
             n_runs=1,
         )
-        result = await run_experiment_tool(exp.model_dump_json(), evaluator_name="nonexistent")
+        result = await _run_experiment_impl(exp.model_dump_json(), evaluator_name="nonexistent")
         assert "error" in result
 
 
 class TestGetResult:
     async def test_by_path(self, tmp_path: Path) -> None:
         path = save_result(_make_result(), path=tmp_path / "r.json")
-        result = await get_result(path=str(path))
+        result = await _get_result_impl(path=str(path))
         assert result["experiment_name"] == "test_exp"
 
     async def test_by_name(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("prompt_eval.store._DEFAULT_BASE", tmp_path)
         monkeypatch.setattr("prompt_eval.mcp_server.list_results", lambda name, **kw: [tmp_path / "r.json"])
         save_result(_make_result("my_exp"), path=tmp_path / "r.json")
-        result = await get_result(experiment_name="my_exp")
-        assert result["experiment_name"] == "test_exp"
+        result = await _get_result_impl(experiment_name="my_exp")
+        assert result["experiment_name"] == "my_exp"
 
     async def test_no_args(self) -> None:
-        result = await get_result()
+        result = await _get_result_impl()
         assert "error" in result
 
 
@@ -98,7 +102,7 @@ class TestListExperiments:
     async def test_lists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("prompt_eval.store._DEFAULT_BASE", tmp_path)
         monkeypatch.setattr("prompt_eval.mcp_server.list_results", lambda **kw: [])
-        result = await list_experiments()
+        result = await _list_experiments_impl()
         assert "experiments" in result
         assert result["total_results"] == 0
 
@@ -106,7 +110,7 @@ class TestListExperiments:
 class TestCompare:
     async def test_compare_variants(self, tmp_path: Path) -> None:
         path = save_result(_make_result(), path=tmp_path / "r.json")
-        result = await compare(str(path), "a", "b")
+        result = await _compare_impl(str(path), "a", "b")
         assert result["variant_a"] == "a"
         assert result["variant_b"] == "b"
         assert "significant" in result

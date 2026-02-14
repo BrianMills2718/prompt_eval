@@ -13,7 +13,15 @@ from prompt_eval.experiment import (
     Trial,
     VariantSummary,
 )
-from prompt_eval.optimize import OptimizeResult, SearchSpace, grid_search, optimize
+from prompt_eval.optimize import (
+    FewShotPool,
+    OptimizeResult,
+    SearchSpace,
+    few_shot_selection,
+    grid_search,
+    instruction_search,
+    optimize,
+)
 from prompt_eval.runner import run_experiment
 from prompt_eval.stats import compare_variants
 from prompt_eval.store import (
@@ -49,6 +57,9 @@ __all__ = [
     # Optimization
     "optimize",
     "grid_search",
+    "few_shot_selection",
+    "instruction_search",
     "SearchSpace",
+    "FewShotPool",
     "OptimizeResult",
 ]

@@ -2,7 +2,7 @@
 
 ## What This Project Does
 
-A/B prompt testing and evaluation library. Define prompt variants, run them against test inputs with an LLM, and compare results with statistical rigor (bootstrap CI or Welch's t-test). Includes persistence, evaluator factories, grid search optimization, and an MCP server for agentic use.
+A/B prompt testing and evaluation library. Define prompt variants, run them against test inputs with an LLM, and compare results with statistical rigor (bootstrap CI or Welch's t-test). Includes persistence, evaluator factories, three optimization strategies (grid search, few-shot selection, instruction search), and an MCP server for agentic use.
 
 ## Architecture
 
@@ -13,7 +13,7 @@ prompt_eval/
   stats.py        # Statistical comparison: bootstrap confidence intervals or Welch's t-test between two variants
   store.py        # Persistence: save/load experiments and results as JSON files (~/.prompt_eval/results/)
   evaluators.py   # Evaluator factories: kappa_evaluator, exact_match_evaluator, contains_evaluator
-  optimize.py     # Grid search over prompt/model/temperature combinations
+  optimize.py     # Three strategies: grid_search, few_shot_selection, instruction_search
   mcp_server.py   # FastMCP server with 4 tools (not imported in __init__.py — requires fastmcp)
 ```
 
@@ -24,7 +24,7 @@ prompt_eval/
 3. **Compare** via `compare_variants(result, "variant_a", "variant_b")` — computes confidence intervals on the score difference. Methods: `"bootstrap"` (default, 10k resamples) or `"welch"` (t-test with z-approximation).
 4. **Save/Load** via `save_result(result)` / `load_result(path)` — persists to `~/.prompt_eval/results/{name}/`.
 5. **Evaluate** with factory functions: `kappa_evaluator(extractor)` for inter-rater reliability, `exact_match_evaluator()`, `contains_evaluator()`.
-6. **Optimize** via `optimize(search_space, inputs, evaluator)` — grid search over prompt/model/temperature combos, picks winner by highest mean score.
+6. **Optimize** via `optimize(search_space, inputs, evaluator, strategy=...)` — three strategies available.
 7. **MCP** via `prompt-eval-mcp` entry point — exposes run/get/list/compare as agent-callable tools.
 
 Prompt messages use `{input}` as a placeholder, which gets substituted with each `ExperimentInput.content` at runtime. If `response_model` is set on the experiment, the runner uses `acall_llm_structured` for typed Pydantic output; otherwise it uses `acall_llm` for raw text.
@@ -88,6 +88,12 @@ ev = contains_evaluator()
 
 ## Optimization
 
+Three strategies, all accessed via `optimize()` or called directly:
+
+### Grid Search (default)
+
+Exhaustive search over prompt/model/temperature combinations.
+
 ```python
 from prompt_eval import optimize, SearchSpace, ExperimentInput
 
@@ -102,6 +108,41 @@ space = SearchSpace(
 
 result = await optimize(space, inputs, evaluator)
 print(f"Best: {result.best_variant} (score: {result.best_score:.3f})")
+```
+
+### Few-Shot Selection
+
+Search over C(n, k) combinations of examples from a pool. Use `{examples}` placeholder in the base prompt.
+
+```python
+from prompt_eval import optimize, FewShotPool, SearchSpace
+
+pool = FewShotPool(
+    examples=["Example 1: ...", "Example 2: ...", "Example 3: ...", "Example 4: ..."],
+    k=2,  # pick 2 examples per combo
+    base_messages=[{"role": "user", "content": "Here are examples:\n{examples}\n\nNow analyze: {input}"}],
+)
+space = SearchSpace(prompt_templates=[])  # not used by few_shot_selection
+
+result = await optimize(space, inputs, evaluator, strategy="few_shot_selection", pool=pool)
+```
+
+Use `budget=N` to randomly sample N combinations instead of trying all C(n, k).
+
+### Instruction Search
+
+Hill-climbing: LLM rewrites the instruction each iteration, evaluates rewrites, keeps the best.
+
+```python
+result = await optimize(
+    space, inputs, evaluator,
+    strategy="instruction_search",
+    base_instruction="Analyze this text for key themes: {input}",
+    n_iterations=5,   # hill-climbing iterations
+    n_rewrites=3,     # rewrites per iteration
+    model="gpt-5-mini",          # model to evaluate with
+    rewrite_model="gpt-5-mini",  # model to generate rewrites
+)
 ```
 
 ## MCP Server
@@ -128,19 +169,19 @@ Only built-in evaluators (`exact_match`, `contains`) available via MCP — `kapp
 python -m pytest tests/ -v
 ```
 
-7 test files, ~73 tests total.
+7 test files, 93 tests.
 
 ## Completed (v0.2.0)
 
 - **Persistence** — `save_result`, `load_result`, `save_experiment`, `load_experiment`, `list_results`
 - **Evaluators** — `kappa_evaluator` (Cohen's kappa), `exact_match_evaluator`, `contains_evaluator`
-- **Optimization** — `grid_search` over prompt/model/temperature combos, `optimize` dispatcher
+- **Grid search** — exhaustive search over prompt/model/temperature/kwargs combinations
+- **Few-shot selection** — search over C(n,k) example combinations with optional budget cap
+- **Instruction search** — LLM-powered hill-climbing prompt rewriting
 - **MCP server** — 4 tools via FastMCP, optional dependency
 
 ## Next Steps
 
-- **Few-shot selection** strategy for `optimize()` — search over example combinations
-- **Instruction search** strategy — automated prompt rewriting to maximize evaluator scores
 - **Integration with qualitative_coding IRR metrics** — use QC's kappa as evaluator for coding task prompts
 - **Multi-model consensus** — run analysis across GPT/Claude/Gemini and merge results
 

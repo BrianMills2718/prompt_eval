@@ -7,7 +7,16 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from prompt_eval.experiment import ExperimentInput
-from prompt_eval.optimize import OptimizeResult, SearchSpace, grid_search, optimize
+from prompt_eval.optimize import (
+    FewShotPool,
+    OptimizeResult,
+    SearchSpace,
+    _inject_examples,
+    few_shot_selection,
+    grid_search,
+    instruction_search,
+    optimize,
+)
 
 
 def _make_inputs() -> list[ExperimentInput]:
@@ -104,6 +113,99 @@ class TestGridSearch:
         assert result.n_trials == 1
 
 
+class TestInjectExamples:
+    def test_basic_injection(self) -> None:
+        messages = [{"role": "user", "content": "Examples:\n{examples}\n\nNow do: {input}"}]
+        result = _inject_examples(messages, ["ex1", "ex2"], "\n")
+        assert result[0]["content"] == "Examples:\nex1\nex2\n\nNow do: {input}"
+
+    def test_custom_separator(self) -> None:
+        messages = [{"role": "user", "content": "{examples}"}]
+        result = _inject_examples(messages, ["a", "b", "c"], " | ")
+        assert result[0]["content"] == "a | b | c"
+
+    def test_no_placeholder(self) -> None:
+        messages = [{"role": "user", "content": "no placeholder here"}]
+        result = _inject_examples(messages, ["ex1"], "\n")
+        assert result[0]["content"] == "no placeholder here"
+
+
+class TestFewShotSelection:
+    async def test_single_combo(self, mock_llm) -> None:
+        pool = FewShotPool(
+            examples=["ex1", "ex2"],
+            k=2,
+            base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+        )
+        result = await few_shot_selection(pool, _make_inputs(), _always_one, n_runs=1)
+        assert result.strategy == "few_shot_selection"
+        assert result.n_trials == 1  # C(2,2) = 1
+        assert result.best_score == 1.0
+
+    async def test_multiple_combos(self, mock_llm) -> None:
+        pool = FewShotPool(
+            examples=["ex1", "ex2", "ex3"],
+            k=2,
+            base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+        )
+        result = await few_shot_selection(pool, _make_inputs(), _always_one, n_runs=1)
+        assert result.n_trials == 3  # C(3,2) = 3
+
+    async def test_budget_limits_combos(self, mock_llm) -> None:
+        pool = FewShotPool(
+            examples=["ex1", "ex2", "ex3", "ex4"],
+            k=2,
+            base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+        )
+        result = await few_shot_selection(pool, _make_inputs(), _always_one, n_runs=1, budget=2)
+        assert result.n_trials == 2  # budget caps at 2
+
+
+class TestInstructionSearch:
+    async def test_basic_search(self, mock_llm) -> None:
+        """Instruction search evaluates base + rewrites."""
+        # mock-ok: testing orchestration, not rewrite quality
+        with patch("prompt_eval.optimize.acall_llm") as rewrite_mock:
+            rewrite_meta = AsyncMock()
+            rewrite_meta.cost = 0.0
+            rewrite_meta.usage = {"total_tokens": 10}
+            rewrite_mock.return_value = ("rewrite_a\n---\nrewrite_b", rewrite_meta)
+
+            result = await instruction_search(
+                base_instruction="do the thing: {input}",
+                inputs=_make_inputs(),
+                evaluator=_always_one,
+                n_iterations=1,
+                n_rewrites=2,
+                n_runs=1,
+            )
+
+        assert result.strategy == "instruction_search"
+        # 1 base + 2 rewrites = 3 trials
+        assert result.n_trials == 3
+        assert result.best_score == 1.0
+
+    async def test_no_rewrites_generated(self, mock_llm) -> None:
+        """If LLM returns empty rewrites, search continues without crashing."""
+        with patch("prompt_eval.optimize.acall_llm") as rewrite_mock:
+            rewrite_meta = AsyncMock()
+            rewrite_meta.cost = 0.0
+            rewrite_meta.usage = {"total_tokens": 10}
+            rewrite_mock.return_value = ("", rewrite_meta)  # empty
+
+            result = await instruction_search(
+                base_instruction="do the thing: {input}",
+                inputs=_make_inputs(),
+                evaluator=_always_one,
+                n_iterations=1,
+                n_rewrites=2,
+                n_runs=1,
+            )
+
+        assert result.strategy == "instruction_search"
+        assert result.n_trials == 1  # only base evaluated
+
+
 class TestOptimize:
     async def test_grid_search_strategy(self, mock_llm) -> None:
         space = SearchSpace(
@@ -112,18 +214,42 @@ class TestOptimize:
         result = await optimize(space, _make_inputs(), _always_one, strategy="grid_search", n_runs=1)
         assert result.strategy == "grid_search"
 
-    async def test_few_shot_not_implemented(self) -> None:
-        space = SearchSpace(
-            prompt_templates=[[{"role": "user", "content": "{input}"}]],
+    async def test_few_shot_strategy(self, mock_llm) -> None:
+        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        pool = FewShotPool(
+            examples=["ex1", "ex2"],
+            k=2,
+            base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
         )
-        with pytest.raises(NotImplementedError, match="few_shot_selection"):
+        result = await optimize(
+            space, _make_inputs(), _always_one,
+            strategy="few_shot_selection", n_runs=1, pool=pool,
+        )
+        assert result.strategy == "few_shot_selection"
+
+    async def test_few_shot_missing_pool_raises(self) -> None:
+        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        with pytest.raises(ValueError, match="requires 'pool'"):
             await optimize(space, _make_inputs(), _always_one, strategy="few_shot_selection")
 
-    async def test_instruction_search_not_implemented(self) -> None:
-        space = SearchSpace(
-            prompt_templates=[[{"role": "user", "content": "{input}"}]],
-        )
-        with pytest.raises(NotImplementedError, match="instruction_search"):
+    async def test_instruction_search_strategy(self, mock_llm) -> None:
+        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        with patch("prompt_eval.optimize.acall_llm") as rewrite_mock:
+            rewrite_meta = AsyncMock()
+            rewrite_meta.cost = 0.0
+            rewrite_meta.usage = {"total_tokens": 10}
+            rewrite_mock.return_value = ("rewrite_a", rewrite_meta)
+
+            result = await optimize(
+                space, _make_inputs(), _always_one,
+                strategy="instruction_search", n_runs=1,
+                base_instruction="do: {input}", n_iterations=1, n_rewrites=1,
+            )
+        assert result.strategy == "instruction_search"
+
+    async def test_instruction_search_missing_instruction_raises(self) -> None:
+        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        with pytest.raises(ValueError, match="requires 'base_instruction'"):
             await optimize(space, _make_inputs(), _always_one, strategy="instruction_search")
 
     async def test_unknown_strategy_raises(self) -> None:
