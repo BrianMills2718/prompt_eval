@@ -80,6 +80,53 @@ class TestRunExperimentTool:
         assert "error" in result
 
 
+    async def test_kappa_evaluator(self, mock_llm, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("prompt_eval.store._DEFAULT_BASE", tmp_path)
+
+        exp = Experiment(
+            name="kappa_test",
+            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            inputs=[ExperimentInput(id="i1", content="hi", expected=["code_a", "code_b"])],
+            n_runs=1,
+        )
+        # Mock returns a list (kappa evaluator expects list output)
+        mock_llm.return_value = (["code_a", "code_b"], mock_llm.return_value[1])
+        result = await _run_experiment_impl(exp.model_dump_json(), evaluator_name="kappa")
+        assert result["experiment_name"] == "kappa_test"
+        assert result["summary"]["v1"]["mean_score"] == 1.0
+
+    async def test_llm_judge_evaluator(self, mock_llm, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("prompt_eval.store._DEFAULT_BASE", tmp_path)
+
+        exp = Experiment(
+            name="judge_test",
+            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            inputs=[ExperimentInput(id="i1", content="hi")],
+            n_runs=1,
+        )
+        # mock acall_llm for both the experiment run AND the judge call
+        with patch("prompt_eval.evaluators.acall_llm", new_callable=AsyncMock) as mock_judge:
+            mock_judge.return_value = ("0.85", AsyncMock())
+            result = await _run_experiment_impl(
+                exp.model_dump_json(),
+                evaluator_name="llm_judge",
+                rubric="Is the output helpful?",
+            )
+        assert result["experiment_name"] == "judge_test"
+        assert result["summary"]["v1"]["mean_score"] == 0.85
+
+    async def test_llm_judge_requires_rubric(self, mock_llm) -> None:
+        exp = Experiment(
+            name="test",
+            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            inputs=[ExperimentInput(id="i1", content="hi")],
+            n_runs=1,
+        )
+        result = await _run_experiment_impl(exp.model_dump_json(), evaluator_name="llm_judge")
+        assert "error" in result
+        assert "rubric" in result["error"]
+
+
 class TestGetResult:
     async def test_by_path(self, tmp_path: Path) -> None:
         path = save_result(_make_result(), path=tmp_path / "r.json")

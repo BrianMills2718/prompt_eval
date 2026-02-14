@@ -12,9 +12,9 @@ prompt_eval/
   runner.py       # Async experiment runner: calls LLM for each variant x input x run, collects trials, builds summaries
   stats.py        # Statistical comparison: bootstrap confidence intervals or Welch's t-test between two variants
   store.py        # Persistence: save/load experiments and results as JSON files (~/.prompt_eval/results/)
-  evaluators.py   # Evaluator factories: kappa_evaluator, exact_match_evaluator, contains_evaluator
+  evaluators.py   # Evaluator factories: kappa_evaluator, exact_match_evaluator, contains_evaluator, llm_judge_evaluator
   optimize.py     # Three strategies: grid_search, few_shot_selection, instruction_search
-  mcp_server.py   # FastMCP server with 4 tools (not imported in __init__.py — requires fastmcp)
+  mcp_server.py   # FastMCP server with 4 tools, 4 built-in evaluators (not imported in __init__.py — requires fastmcp)
 ```
 
 ## How It Works
@@ -163,7 +163,7 @@ prompt-eval-mcp  # starts FastMCP server
 ```
 
 Four tools: `run_experiment_tool`, `get_result`, `list_experiments`, `compare`.
-Only built-in evaluators (`exact_match`, `contains`) available via MCP — `kappa_evaluator` requires a callable.
+Four built-in evaluators available via MCP: `exact_match`, `contains`, `kappa` (assumes list-of-strings output), `llm_judge` (requires `rubric` parameter, optionally `judge_model`).
 
 ## Dependencies
 
@@ -178,7 +178,7 @@ Only built-in evaluators (`exact_match`, `contains`) available via MCP — `kapp
 python -m pytest tests/ -v
 ```
 
-7 test files, 101 tests.
+7 test files, 104 tests.
 
 ## Completed (v0.2.0)
 
@@ -187,11 +187,10 @@ python -m pytest tests/ -v
 - **Grid search** — exhaustive search over prompt/model/temperature/kwargs combinations
 - **Few-shot selection** — search over C(n,k) example combinations with optional budget cap
 - **Instruction search** — LLM-powered hill-climbing prompt rewriting
-- **MCP server** — 4 tools via FastMCP, optional dependency
+- **MCP server** — 4 tools via FastMCP, 4 built-in evaluators (exact_match, contains, kappa, llm_judge), optional dependency
 
 ## Next Steps
 
-- **Integration with qualitative_coding IRR metrics** — use QC's kappa as evaluator for coding task prompts
 - **Multi-model consensus** — run analysis across GPT/Claude/Gemini and merge results
 
 ## Related Projects
