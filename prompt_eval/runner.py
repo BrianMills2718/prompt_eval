@@ -1,0 +1,157 @@
+"""Experiment runner — executes prompt variants and collects trials."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from typing import Any, Callable, Optional
+
+from llm_client import acall_llm, acall_llm_structured
+
+from prompt_eval.experiment import (
+    EvalResult,
+    Experiment,
+    ExperimentInput,
+    PromptVariant,
+    Trial,
+    VariantSummary,
+)
+
+logger = logging.getLogger(__name__)
+
+
+async def run_experiment(
+    experiment: Experiment,
+    evaluator: Optional[Callable[[Any, Optional[Any]], float]] = None,
+) -> EvalResult:
+    """Run all variants against all inputs, collect trials, compute summaries.
+
+    Args:
+        experiment: The experiment definition.
+        evaluator: Optional function(output, expected) -> float score.
+            If None, trials are collected without scores.
+
+    Returns:
+        EvalResult with all trials and per-variant summaries.
+    """
+    trials: list[Trial] = []
+
+    for variant in experiment.variants:
+        for inp in experiment.inputs:
+            for run_idx in range(experiment.n_runs):
+                logger.info(
+                    "Running %s / %s / run %d",
+                    variant.name, inp.id, run_idx + 1,
+                )
+                trial = await _run_single_trial(
+                    variant, inp, experiment.response_model, evaluator,
+                )
+                trials.append(trial)
+
+    # Build summaries
+    summary = _build_summaries(trials, [v.name for v in experiment.variants])
+
+    return EvalResult(
+        experiment_name=experiment.name,
+        variants=[v.name for v in experiment.variants],
+        trials=trials,
+        summary=summary,
+    )
+
+
+async def _run_single_trial(
+    variant: PromptVariant,
+    inp: ExperimentInput,
+    response_model: Optional[Any],
+    evaluator: Optional[Callable],
+) -> Trial:
+    """Execute one LLM call and return a Trial."""
+    # Substitute {input} placeholder in user messages
+    messages = _substitute_input(variant.messages, inp.content)
+
+    start = time.monotonic()
+    try:
+        if response_model is not None:
+            result, meta = await acall_llm_structured(
+                variant.model,
+                messages,
+                response_model=response_model,
+                temperature=variant.temperature,
+                **variant.kwargs,
+            )
+        else:
+            result, meta = await acall_llm(
+                variant.model,
+                messages,
+                temperature=variant.temperature,
+                **variant.kwargs,
+            )
+
+        latency_ms = (time.monotonic() - start) * 1000
+
+        score = None
+        if evaluator is not None:
+            try:
+                score = evaluator(result, inp.expected)
+            except Exception as e:
+                logger.warning("Evaluator failed for %s/%s: %s", variant.name, inp.id, e)
+
+        return Trial(
+            variant_name=variant.name,
+            input_id=inp.id,
+            output=result,
+            score=score,
+            cost=meta.cost,
+            latency_ms=latency_ms,
+            tokens_used=meta.usage.get("total_tokens", 0) if meta.usage else 0,
+        )
+
+    except Exception as e:
+        latency_ms = (time.monotonic() - start) * 1000
+        logger.error("Trial failed for %s/%s: %s", variant.name, inp.id, e)
+        return Trial(
+            variant_name=variant.name,
+            input_id=inp.id,
+            output=None,
+            error=str(e),
+            latency_ms=latency_ms,
+        )
+
+
+def _substitute_input(messages: list[dict[str, str]], content: str) -> list[dict[str, str]]:
+    """Replace {input} placeholder in message content."""
+    return [
+        {**msg, "content": msg["content"].replace("{input}", content)}
+        for msg in messages
+    ]
+
+
+def _build_summaries(
+    trials: list[Trial], variant_names: list[str]
+) -> dict[str, VariantSummary]:
+    """Compute per-variant aggregate stats."""
+    import statistics
+
+    summaries = {}
+    for name in variant_names:
+        variant_trials = [t for t in trials if t.variant_name == name]
+        scores = [t.score for t in variant_trials if t.score is not None]
+        errors = [t for t in variant_trials if t.error is not None]
+
+        summaries[name] = VariantSummary(
+            variant_name=name,
+            n_trials=len(variant_trials),
+            n_errors=len(errors),
+            mean_score=statistics.mean(scores) if scores else None,
+            std_score=statistics.stdev(scores) if len(scores) >= 2 else None,
+            mean_cost=(
+                statistics.mean(t.cost for t in variant_trials if t.error is None)
+                if any(t.error is None for t in variant_trials)
+                else 0.0
+            ),
+            mean_latency_ms=statistics.mean(t.latency_ms for t in variant_trials),
+            total_tokens=sum(t.tokens_used for t in variant_trials),
+        )
+
+    return summaries
