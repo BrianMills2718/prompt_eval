@@ -133,6 +133,29 @@ async def _compare_impl(
     }
 
 
+async def _evaluate_output_impl(
+    output: str,
+    evaluator_name: str,
+    expected: str | None = None,
+    rubric: str | None = None,
+    judge_model: str | None = None,
+) -> dict:
+    """Score a single output using a built-in evaluator."""
+    if evaluator_name == "llm_judge":
+        if rubric is None:
+            return {"error": "llm_judge evaluator requires a 'rubric' parameter"}
+        evaluator = llm_judge_evaluator(rubric, judge_model=judge_model or "gpt-5-mini")
+        score = await evaluator(output, expected)
+    elif evaluator_name in _BUILTIN_EVALUATORS:
+        evaluator = _BUILTIN_EVALUATORS[evaluator_name]
+        score = evaluator(output, expected)
+    else:
+        available = list(_BUILTIN_EVALUATORS) + ["llm_judge"]
+        return {"error": f"Unknown evaluator: {evaluator_name}. Available: {available}"}
+
+    return {"score": score, "evaluator": evaluator_name}
+
+
 # --- MCP tool registration ---
 
 
@@ -190,6 +213,28 @@ async def compare(
         method: "bootstrap" (default) or "welch".
     """
     return await _compare_impl(path, variant_a, variant_b, method)
+
+
+@mcp.tool
+async def evaluate_output(
+    output: str,
+    evaluator_name: str,
+    expected: str | None = None,
+    rubric: str | None = None,
+    judge_model: str | None = None,
+) -> dict:
+    """Score a single output using a built-in evaluator.
+
+    Use this to evaluate outputs produced by external tools (e.g., a QC coding pipeline).
+
+    Args:
+        output: The output to evaluate (string or JSON string).
+        evaluator_name: Evaluator to use ("exact_match", "contains", "kappa", "llm_judge").
+        expected: Optional expected/reference output for comparison.
+        rubric: Scoring criteria (required for llm_judge).
+        judge_model: Model for llm_judge (default: gpt-5-mini).
+    """
+    return await _evaluate_output_impl(output, evaluator_name, expected, rubric, judge_model)
 
 
 def main() -> None:

@@ -19,6 +19,7 @@ from prompt_eval.experiment import (
 )
 from prompt_eval.mcp_server import (
     _compare_impl,
+    _evaluate_output_impl,
     _get_result_impl,
     _list_experiments_impl,
     _run_experiment_impl,
@@ -152,6 +153,43 @@ class TestListExperiments:
         result = await _list_experiments_impl()
         assert "experiments" in result
         assert result["total_results"] == 0
+
+
+class TestEvaluateOutput:
+    async def test_exact_match(self) -> None:
+        result = await _evaluate_output_impl("hello", "exact_match", expected="hello")
+        assert result["score"] == 1.0
+        assert result["evaluator"] == "exact_match"
+
+    async def test_exact_match_no_match(self) -> None:
+        result = await _evaluate_output_impl("hello", "exact_match", expected="world")
+        assert result["score"] == 0.0
+
+    async def test_contains(self) -> None:
+        result = await _evaluate_output_impl("the answer is 42", "contains", expected="42")
+        assert result["score"] == 1.0
+
+    async def test_kappa(self) -> None:
+        # kappa with string input wraps in list, so single string vs single string
+        result = await _evaluate_output_impl("code_a", "kappa", expected="code_a")
+        assert result["score"] == 1.0
+
+    async def test_llm_judge(self) -> None:
+        # mock-ok: testing tool orchestration, not actual LLM judge quality
+        with patch("prompt_eval.evaluators.acall_llm", new_callable=AsyncMock) as mock_judge:
+            mock_judge.return_value = ("0.9", AsyncMock())
+            result = await _evaluate_output_impl(
+                "some output", "llm_judge", rubric="Is it good?"
+            )
+        assert result["score"] == 0.9
+
+    async def test_llm_judge_requires_rubric(self) -> None:
+        result = await _evaluate_output_impl("output", "llm_judge")
+        assert "error" in result
+
+    async def test_unknown_evaluator(self) -> None:
+        result = await _evaluate_output_impl("output", "nonexistent")
+        assert "error" in result
 
 
 class TestCompare:

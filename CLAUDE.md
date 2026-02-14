@@ -162,8 +162,10 @@ Requires `pip install prompt-eval[mcp]`. Not imported by default.
 prompt-eval-mcp  # starts FastMCP server
 ```
 
-Four tools: `run_experiment_tool`, `get_result`, `list_experiments`, `compare`.
+Five tools: `run_experiment_tool`, `get_result`, `list_experiments`, `compare`, `evaluate_output`.
 Four built-in evaluators available via MCP: `exact_match`, `contains`, `kappa` (assumes list-of-strings output), `llm_judge` (requires `rubric` parameter, optionally `judge_model`).
+
+`evaluate_output` scores a single output without running an experiment — designed for agent workflows where an external tool (e.g., a QC MCP) produces output and prompt_eval just evaluates it.
 
 ## Dependencies
 
@@ -178,7 +180,7 @@ Four built-in evaluators available via MCP: `exact_match`, `contains`, `kappa` (
 python -m pytest tests/ -v
 ```
 
-7 test files, 104 tests.
+7 test files, 111 tests.
 
 ## Completed (v0.2.0)
 
@@ -187,7 +189,7 @@ python -m pytest tests/ -v
 - **Grid search** — exhaustive search over prompt/model/temperature/kwargs combinations
 - **Few-shot selection** — search over C(n,k) example combinations with optional budget cap
 - **Instruction search** — LLM-powered hill-climbing prompt rewriting
-- **MCP server** — 4 tools via FastMCP, 4 built-in evaluators (exact_match, contains, kappa, llm_judge), optional dependency
+- **MCP server** — 5 tools via FastMCP (including `evaluate_output` for agent workflows), 4 built-in evaluators, optional dependency
 
 ## Next Steps
 
