@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import time
 from typing import Any, Callable, Optional
@@ -93,7 +94,10 @@ async def _run_single_trial(
         score = None
         if evaluator is not None:
             try:
-                score = evaluator(result, inp.expected)
+                if inspect.iscoroutinefunction(evaluator):
+                    score = await evaluator(result, inp.expected)
+                else:
+                    score = evaluator(result, inp.expected)
             except Exception as e:
                 logger.warning("Evaluator failed for %s/%s: %s", variant.name, inp.id, e)
 

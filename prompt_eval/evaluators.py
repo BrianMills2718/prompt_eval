@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Callable, Optional
+
+from llm_client import acall_llm
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize(name: str) -> str:
@@ -97,5 +102,77 @@ def contains_evaluator(
         out_str = key_extractor(output) if key_extractor else str(output)
         exp_str = key_extractor(expected) if key_extractor else str(expected)
         return 1.0 if exp_str in out_str else 0.0
+
+    return evaluate
+
+
+_JUDGE_PROMPT = """Score the following output on a scale of 0.0 to 1.0.
+
+## Rubric
+{rubric}
+
+## Output to evaluate
+{output}
+
+{expected_section}
+
+## Instructions
+Respond with ONLY a single decimal number between 0.0 and 1.0.
+Do not include any other text, explanation, or formatting."""
+
+
+def llm_judge_evaluator(
+    rubric: str,
+    judge_model: str = "gpt-5-mini",
+    output_formatter: Callable[[Any], str] | None = None,
+) -> Callable:
+    """Create an async evaluator that uses an LLM to score output against a rubric.
+
+    The judge LLM receives the rubric and the output, and returns a score
+    between 0.0 and 1.0. If `expected` is provided, it's included for context.
+
+    Args:
+        rubric: Scoring criteria. Can be anything: research questions,
+            quality standards, a grading rubric, methodology requirements.
+        judge_model: Model to use as judge (default: gpt-5-mini).
+        output_formatter: Optional function to format the output before
+            sending to the judge. If None, uses str().
+
+    Returns:
+        Async evaluator function(output, expected) -> float.
+    """
+    async def evaluate(output: Any, expected: Any = None) -> float:
+        formatted_output = output_formatter(output) if output_formatter else str(output)
+
+        expected_section = ""
+        if expected is not None:
+            expected_str = output_formatter(expected) if output_formatter else str(expected)
+            expected_section = f"## Reference (expected)\n{expected_str}"
+
+        prompt = _JUDGE_PROMPT.format(
+            rubric=rubric,
+            output=formatted_output,
+            expected_section=expected_section,
+        )
+
+        response, _ = await acall_llm(
+            judge_model,
+            [{"role": "user", "content": prompt}],
+            temperature=0.0,
+        )
+
+        # Parse the score from the response
+        text = str(response).strip()
+        try:
+            score = float(text)
+            return max(0.0, min(1.0, score))
+        except ValueError:
+            # Try to extract a number from the response
+            match = re.search(r"(\d+\.?\d*)", text)
+            if match:
+                score = float(match.group(1))
+                return max(0.0, min(1.0, score))
+            logger.warning("Judge returned unparseable score: %r", text)
+            return 0.0
 
     return evaluate

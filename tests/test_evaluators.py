@@ -1,5 +1,7 @@
 """Tests for prompt_eval.evaluators."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from prompt_eval.evaluators import (
@@ -9,6 +11,7 @@ from prompt_eval.evaluators import (
     contains_evaluator,
     exact_match_evaluator,
     kappa_evaluator,
+    llm_judge_evaluator,
 )
 
 
@@ -137,3 +140,65 @@ class TestContainsEvaluator:
     def test_key_extractor(self) -> None:
         ev = contains_evaluator(key_extractor=lambda x: x.get("text", ""))
         assert ev({"text": "the answer is 42"}, {"text": "42"}) == 1.0
+
+
+class TestLlmJudgeEvaluator:
+    # mock-ok: testing evaluator orchestration, not actual LLM judge quality
+
+    async def test_clean_score(self) -> None:
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("0.85", AsyncMock())
+            ev = llm_judge_evaluator(rubric="Is it good?")
+            score = await ev("some output")
+            assert score == 0.85
+
+    async def test_clamps_to_range(self) -> None:
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("1.5", AsyncMock())
+            ev = llm_judge_evaluator(rubric="test")
+            assert await ev("output") == 1.0
+
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("-0.3", AsyncMock())
+            ev = llm_judge_evaluator(rubric="test")
+            assert await ev("output") == 0.0
+
+    async def test_extracts_number_from_text(self) -> None:
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("Score: 0.72", AsyncMock())
+            ev = llm_judge_evaluator(rubric="test")
+            assert await ev("output") == 0.72
+
+    async def test_unparseable_returns_zero(self) -> None:
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("I can't score this", AsyncMock())
+            ev = llm_judge_evaluator(rubric="test")
+            assert await ev("output") == 0.0
+
+    async def test_includes_expected_in_prompt(self) -> None:
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("0.9", AsyncMock())
+            ev = llm_judge_evaluator(rubric="test")
+            await ev("output", expected="reference answer")
+            call_args = mock.call_args
+            prompt = call_args[0][1][0]["content"]
+            assert "reference answer" in prompt
+
+    async def test_custom_output_formatter(self) -> None:
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("0.7", AsyncMock())
+            ev = llm_judge_evaluator(
+                rubric="test",
+                output_formatter=lambda x: f"FORMATTED: {x}",
+            )
+            await ev("raw output")
+            prompt = mock.call_args[0][1][0]["content"]
+            assert "FORMATTED: raw output" in prompt
+
+    async def test_rubric_in_prompt(self) -> None:
+        with patch("prompt_eval.evaluators.acall_llm") as mock:
+            mock.return_value = ("0.5", AsyncMock())
+            ev = llm_judge_evaluator(rubric="Codes must be grounded in participant quotes")
+            await ev("some codes")
+            prompt = mock.call_args[0][1][0]["content"]
+            assert "grounded in participant quotes" in prompt

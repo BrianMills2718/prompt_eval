@@ -73,10 +73,17 @@ print(comparison.detail)
 ## Evaluators
 
 ```python
-from prompt_eval import kappa_evaluator, exact_match_evaluator, contains_evaluator
+from prompt_eval import kappa_evaluator, exact_match_evaluator, contains_evaluator, llm_judge_evaluator
+
+# LLM judge — scores output against a rubric via LLM (async)
+ev = llm_judge_evaluator(
+    rubric="Codes must be specific, grounded in quotes, and cover all major themes.",
+    judge_model="gpt-5-mini",
+)
+score = await ev(output, expected)  # returns 0.0-1.0
 
 # Cohen's kappa — compares code lists from output vs expected
-ev = kappa_evaluator(lambda r: r.codes)  # extractor pulls code names from Pydantic model
+ev = kappa_evaluator(lambda r: r.codes)
 score = ev(output_model, expected_model)  # returns kappa float
 
 # Exact match — 1.0 if str(output) == str(expected)
@@ -85,6 +92,8 @@ ev = exact_match_evaluator()
 # Contains — 1.0 if expected found in output
 ev = contains_evaluator()
 ```
+
+The `llm_judge_evaluator` is async (uses LLM calls). The runner supports both sync and async evaluators transparently.
 
 ## Optimization
 
@@ -169,12 +178,12 @@ Only built-in evaluators (`exact_match`, `contains`) available via MCP — `kapp
 python -m pytest tests/ -v
 ```
 
-7 test files, 93 tests.
+7 test files, 101 tests.
 
 ## Completed (v0.2.0)
 
 - **Persistence** — `save_result`, `load_result`, `save_experiment`, `load_experiment`, `list_results`
-- **Evaluators** — `kappa_evaluator` (Cohen's kappa), `exact_match_evaluator`, `contains_evaluator`
+- **Evaluators** — `kappa_evaluator` (Cohen's kappa), `exact_match_evaluator`, `contains_evaluator`, `llm_judge_evaluator` (async, scores against rubric via LLM)
 - **Grid search** — exhaustive search over prompt/model/temperature/kwargs combinations
 - **Few-shot selection** — search over C(n,k) example combinations with optional budget cap
 - **Instruction search** — LLM-powered hill-climbing prompt rewriting

@@ -169,3 +169,18 @@ class TestRunExperiment:
         # Should complete without crashing, scores are None
         assert all(t.score is None for t in result.trials)
         assert all(t.error is None for t in result.trials)
+
+    @pytest.mark.asyncio
+    async def test_async_evaluator(self, simple_experiment):
+        """Async evaluators (like llm_judge_evaluator) are awaited correctly."""
+        mock_meta = MagicMock(cost=0.001, usage={"total_tokens": 50})
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = ("summary text", mock_meta)
+
+            async def async_eval(output, expected):
+                return 0.75
+
+            result = await run_experiment(simple_experiment, evaluator=async_eval)
+
+        for trial in result.trials:
+            assert trial.score == 0.75

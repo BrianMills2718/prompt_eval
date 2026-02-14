@@ -4,6 +4,7 @@ from prompt_eval.evaluators import (
     contains_evaluator,
     exact_match_evaluator,
     kappa_evaluator,
+    llm_judge_evaluator,
 )
 from prompt_eval.experiment import (
     EvalResult,
@@ -54,6 +55,7 @@ __all__ = [
     "kappa_evaluator",
     "exact_match_evaluator",
     "contains_evaluator",
+    "llm_judge_evaluator",
     # Optimization
     "optimize",
     "grid_search",
