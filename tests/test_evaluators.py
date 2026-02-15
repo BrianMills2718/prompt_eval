@@ -316,15 +316,12 @@ class TestDimensionalEvaluator:
         # weighted: (0.8*3 + 0.4*1) / 4 = 2.8/4 = 0.7
         assert result.score == pytest.approx(0.7)
 
-    async def test_judge_failure_handled(self, dimensions: list[RubricDimension]) -> None:
+    async def test_judge_failure_raises(self, dimensions: list[RubricDimension]) -> None:
         with patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock:
             mock.side_effect = Exception("API error")
             ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
-            result = await ev("output")
-
-        assert isinstance(result, EvalScore)
-        assert result.score == 0.0
-        assert result.dimension_scores["clarity"] == 0.0
+            with pytest.raises(RuntimeError, match="All 1 judge model"):
+                await ev("output")
 
     async def test_includes_expected_in_prompt(self, dimensions: list[RubricDimension]) -> None:
         verdict = JudgeVerdict(

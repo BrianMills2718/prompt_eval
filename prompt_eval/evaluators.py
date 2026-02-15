@@ -325,6 +325,13 @@ def llm_judge_dimensional_evaluator(
             except Exception as e:
                 logger.warning("Judge model %s failed: %s", model, e)
 
+        # Check that at least one judge produced valid scores
+        has_scores = any(scores for scores in all_dim_scores.values())
+        if not has_scores:
+            raise RuntimeError(
+                f"All {len(judge_models)} judge model(s) failed to produce scores"
+            )
+
         # Average across judges
         avg_dims: dict[str, float] = {}
         for name, scores in all_dim_scores.items():
