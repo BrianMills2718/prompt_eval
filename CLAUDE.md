@@ -20,7 +20,7 @@ prompt_eval/
 ## How It Works
 
 1. **Define** an `Experiment` with `PromptVariant`s (prompt messages + model config) and `ExperimentInput`s (test cases with optional ground truth).
-2. **Run** via `run_experiment(experiment, evaluator=...)` — calls the LLM for each variant/input/run combination, optionally scoring outputs with a custom evaluator function. Returns `EvalResult` with all trials and per-variant summaries (mean score, cost, latency, tokens).
+2. **Run** via `run_experiment(experiment, evaluator=..., corpus_evaluator=...)` — calls the LLM for each variant/input/run combination, optionally scoring outputs with a per-trial evaluator and/or a corpus-level evaluator (runs once per variant on all outputs). Returns `EvalResult` with all trials and per-variant summaries (mean score, corpus score, cost, latency, tokens).
 3. **Compare** via `compare_variants(result, "variant_a", "variant_b")` — computes confidence intervals on the score difference. Methods: `"bootstrap"` (default, 10k resamples) or `"welch"` (t-test with z-approximation).
 4. **Save/Load** via `save_result(result)` / `load_result(path)` — persists to `~/.prompt_eval/results/{name}/`.
 5. **Evaluate** with factory functions: `kappa_evaluator(extractor)` for inter-rater reliability, `exact_match_evaluator()`, `contains_evaluator()`.
@@ -110,6 +110,22 @@ ev = contains_evaluator()
 
 LLM judge evaluators are async (use LLM calls). The runner supports both sync and async evaluators transparently. Judges use 0-100 integer scoring internally for better discrimination (converted to 0.0-1.0 on return). If all judge models fail, `RuntimeError` is raised (no silent zero scores).
 
+### Corpus-Level Evaluators
+
+For metrics that need cross-response aggregation (e.g., voice fingerprinting, stylistic consistency), use `corpus_evaluator`:
+
+```python
+def voice_fidelity(outputs: list[str]) -> float:
+    """Score 0-1: how close are these outputs to the creator's voice?"""
+    return compute_fidelity(outputs)
+
+result = await run_experiment(experiment, corpus_evaluator=voice_fidelity)
+result.summary["variant_a"].corpus_score       # float
+result.summary["variant_a"].corpus_dimension_scores  # optional dict
+```
+
+Corpus evaluators receive all successful outputs for one variant. Return `float` or `EvalScore` (for per-dimension breakdown). Works alongside per-trial evaluators. Note: `compare_variants()` cannot do statistical comparison on corpus scores (single value per variant — no variance).
+
 ## Optimization
 
 Three strategies, all accessed via `optimize()` or called directly:
@@ -195,7 +211,7 @@ Four built-in evaluators available via MCP: `exact_match`, `contains`, `kappa` (
 python -m pytest tests/ -v
 ```
 
-7 test files, 111 tests.
+7 test files, 129 tests.
 
 ## Completed (v0.2.0)
 

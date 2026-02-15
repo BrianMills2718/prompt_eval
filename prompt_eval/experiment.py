@@ -64,6 +64,12 @@ class VariantSummary(BaseModel):
     mean_cost: float = 0.0
     mean_latency_ms: float = 0.0
     total_tokens: int = 0
+    corpus_score: Optional[float] = Field(
+        default=None, description="Score from corpus-level evaluator (runs on all outputs for this variant)"
+    )
+    corpus_dimension_scores: Optional[Dict[str, float]] = Field(
+        default=None, description="Per-dimension scores from corpus-level evaluator"
+    )
 
 
 # Fix forward reference

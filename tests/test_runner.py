@@ -225,3 +225,117 @@ class TestRunExperiment:
 
         for summary in result.summary.values():
             assert summary.dimension_means is None
+
+    @pytest.mark.asyncio
+    async def test_corpus_evaluator_sync(self, simple_experiment):
+        """Sync corpus evaluator receives all outputs and produces corpus_score."""
+        captured_outputs = {}
+
+        def corpus_eval(outputs):
+            # Capture what was passed for verification
+            captured_outputs[len(captured_outputs)] = list(outputs)
+            return len(outputs) / 10.0  # deterministic score based on count
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="summary text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            result = await run_experiment(simple_experiment, corpus_evaluator=corpus_eval)
+
+        # 2 variants, so corpus_eval called twice
+        assert len(captured_outputs) == 2
+        # Each variant: 1 input * 2 runs = 2 outputs
+        for outputs in captured_outputs.values():
+            assert len(outputs) == 2
+            assert all(o == "summary text" for o in outputs)
+
+        for summary in result.summary.values():
+            assert summary.corpus_score == pytest.approx(0.2)  # 2/10
+
+    @pytest.mark.asyncio
+    async def test_corpus_evaluator_async(self, simple_experiment):
+        """Async corpus evaluator is awaited correctly."""
+        async def corpus_eval(outputs):
+            return 0.75
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            result = await run_experiment(simple_experiment, corpus_evaluator=corpus_eval)
+
+        for summary in result.summary.values():
+            assert summary.corpus_score == pytest.approx(0.75)
+
+    @pytest.mark.asyncio
+    async def test_corpus_evaluator_eval_score(self, simple_experiment):
+        """Corpus evaluator returning EvalScore populates dimension scores."""
+        def corpus_eval(outputs):
+            return EvalScore(
+                score=0.82,
+                dimension_scores={"fluency": 0.9, "consistency": 0.74},
+            )
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            result = await run_experiment(simple_experiment, corpus_evaluator=corpus_eval)
+
+        for summary in result.summary.values():
+            assert summary.corpus_score == pytest.approx(0.82)
+            assert summary.corpus_dimension_scores == {"fluency": 0.9, "consistency": 0.74}
+
+    @pytest.mark.asyncio
+    async def test_corpus_evaluator_error_doesnt_crash(self, simple_experiment):
+        """Corpus evaluator exception results in None score, not a crash."""
+        def corpus_eval(outputs):
+            raise RuntimeError("fingerprint failed")
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            result = await run_experiment(simple_experiment, corpus_evaluator=corpus_eval)
+
+        for summary in result.summary.values():
+            assert summary.corpus_score is None
+            assert summary.corpus_dimension_scores is None
+
+    @pytest.mark.asyncio
+    async def test_corpus_evaluator_with_regular_evaluator(self, simple_experiment):
+        """Both per-trial and corpus evaluators can run together."""
+        def per_trial(output, expected):
+            return 0.85
+
+        def corpus_eval(outputs):
+            return 0.6
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            result = await run_experiment(
+                simple_experiment, evaluator=per_trial, corpus_evaluator=corpus_eval,
+            )
+
+        # Per-trial scores populated
+        for trial in result.trials:
+            assert trial.score == 0.85
+        # Corpus scores populated
+        for summary in result.summary.values():
+            assert summary.mean_score == pytest.approx(0.85)
+            assert summary.corpus_score == pytest.approx(0.6)
+
+    @pytest.mark.asyncio
+    async def test_no_corpus_evaluator_fields_none(self, simple_experiment):
+        """Without corpus_evaluator, corpus fields stay None (backward compat)."""
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            result = await run_experiment(simple_experiment)
+
+        for summary in result.summary.values():
+            assert summary.corpus_score is None
+            assert summary.corpus_dimension_scores is None

@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 async def run_experiment(
     experiment: Experiment,
     evaluator: Optional[Callable[[Any, Optional[Any]], float]] = None,
+    corpus_evaluator: Optional[Callable[[list[Any]], float]] = None,
 ) -> EvalResult:
     """Run all variants against all inputs, collect trials, compute summaries.
 
@@ -33,6 +34,9 @@ async def run_experiment(
         experiment: The experiment definition.
         evaluator: Optional function(output, expected) -> float score.
             If None, trials are collected without scores.
+        corpus_evaluator: Optional function(list[outputs]) -> float | EvalScore.
+            Runs once per variant on all its successful outputs.
+            Returns a single aggregate score per variant.
 
     Returns:
         EvalResult with all trials and per-variant summaries.
@@ -61,8 +65,34 @@ async def run_experiment(
                 variant.name, errors, expected,
             )
 
+    # Corpus-level evaluation (one call per variant)
+    corpus_results: dict[str, tuple[Optional[float], Optional[dict]]] = {}
+    if corpus_evaluator is not None:
+        for variant in experiment.variants:
+            outputs = [
+                t.output for t in trials
+                if t.variant_name == variant.name and t.output is not None
+            ]
+            if not outputs:
+                logger.warning("No outputs for variant '%s' — skipping corpus eval", variant.name)
+                corpus_results[variant.name] = (None, None)
+                continue
+            try:
+                if inspect.iscoroutinefunction(corpus_evaluator):
+                    result = await corpus_evaluator(outputs)
+                else:
+                    result = corpus_evaluator(outputs)
+
+                if isinstance(result, EvalScore):
+                    corpus_results[variant.name] = (result.score, result.dimension_scores)
+                elif isinstance(result, (int, float)):
+                    corpus_results[variant.name] = (float(result), None)
+            except Exception as e:
+                logger.warning("Corpus evaluator failed for '%s': %s", variant.name, e)
+                corpus_results[variant.name] = (None, None)
+
     # Build summaries
-    summary = _build_summaries(trials, [v.name for v in experiment.variants])
+    summary = _build_summaries(trials, [v.name for v in experiment.variants], corpus_results or None)
 
     return EvalResult(
         experiment_name=experiment.name,
@@ -155,7 +185,9 @@ def _substitute_input(messages: list[dict[str, str]], content: str) -> list[dict
 
 
 def _build_summaries(
-    trials: list[Trial], variant_names: list[str]
+    trials: list[Trial],
+    variant_names: list[str],
+    corpus_results: Optional[dict[str, tuple[Optional[float], Optional[dict]]]] = None,
 ) -> dict[str, VariantSummary]:
     """Compute per-variant aggregate stats."""
     import statistics
@@ -179,6 +211,12 @@ def _build_summaries(
                 for dim_name, dim_scores in all_dims.items()
             }
 
+        # Corpus-level scores
+        corpus_score = None
+        corpus_dimension_scores = None
+        if corpus_results and name in corpus_results:
+            corpus_score, corpus_dimension_scores = corpus_results[name]
+
         summaries[name] = VariantSummary(
             variant_name=name,
             n_trials=len(variant_trials),
@@ -193,6 +231,8 @@ def _build_summaries(
             ),
             mean_latency_ms=statistics.mean(t.latency_ms for t in variant_trials),
             total_tokens=sum(t.tokens_used for t in variant_trials),
+            corpus_score=corpus_score,
+            corpus_dimension_scores=corpus_dimension_scores,
         )
 
     return summaries
