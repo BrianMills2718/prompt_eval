@@ -171,6 +171,7 @@ def llm_judge_evaluator(
     rubric: str,
     judge_model: str = "gpt-5-mini",
     output_formatter: Callable[[Any], str] | None = None,
+    timeout: int = 120,
 ) -> Callable:
     """Create an async evaluator that uses an LLM to score output against a rubric.
 
@@ -183,6 +184,7 @@ def llm_judge_evaluator(
         judge_model: Model to use as judge (default: gpt-5-mini).
         output_formatter: Optional function to format the output before
             sending to the judge. If None, uses str().
+        timeout: Timeout in seconds for the judge LLM call (default: 120).
 
     Returns:
         Async evaluator function(output, expected) -> float.
@@ -204,6 +206,7 @@ def llm_judge_evaluator(
         result = await acall_llm(
             judge_model,
             [{"role": "user", "content": prompt}],
+            timeout=timeout,
         )
 
         # Parse integer 0-100 score, convert to 0.0-1.0
@@ -271,6 +274,7 @@ def llm_judge_dimensional_evaluator(
     dimensions: list[RubricDimension],
     judge_models: list[str] | None = None,
     output_formatter: Callable[[Any], str] | None = None,
+    timeout: int = 120,
 ) -> Callable:
     """Create an async evaluator that scores output on multiple rubric dimensions.
 
@@ -282,6 +286,7 @@ def llm_judge_dimensional_evaluator(
         judge_models: Models to use as judges (averaged if multiple).
             Defaults to ["gpt-5-mini"].
         output_formatter: Optional function to format output before judging.
+        timeout: Timeout in seconds for each judge LLM call (default: 120).
 
     Returns:
         Async evaluator function(output, expected) -> EvalScore.
@@ -317,6 +322,7 @@ def llm_judge_dimensional_evaluator(
                     model,
                     messages,
                     response_model=JudgeVerdict,
+                    timeout=timeout,
                 )
                 all_reasoning.append(f"[{model}] {verdict.reasoning}")
                 for ds in verdict.scores:

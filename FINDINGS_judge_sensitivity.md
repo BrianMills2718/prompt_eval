@@ -61,7 +61,7 @@ API timeouts + judge failures (all-zero scores) significantly skewed variant mea
 | `prompt_eval`: `acall_llm` returns `LLMCallResult` not tuple | Updated evaluators.py, runner.py, optimize.py to use `.content` |
 | `prompt_eval`: 0.05 quantization on 0.0-1.0 scale | Switched to 0-100 integer scale, divide by 100 internally |
 | `prompt_eval`: Judge all-zero verdict counted as real score | Raise exception when no judge produces valid scores |
-| `prompt_eval`: No retry for failed trials | Added single retry pass for failed trials |
+| `prompt_eval`: Judge calls used llm_client's 60s default timeout | Added `timeout=120` parameter to both evaluator factories (llm_client already retries 2x on timeout) |
 
 ## Recommendations for prompt_eval Users
 

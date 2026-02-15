@@ -73,14 +73,29 @@ print(comparison.detail)
 ## Evaluators
 
 ```python
-from prompt_eval import kappa_evaluator, exact_match_evaluator, contains_evaluator, llm_judge_evaluator
+from prompt_eval import (
+    kappa_evaluator, exact_match_evaluator, contains_evaluator,
+    llm_judge_evaluator, llm_judge_dimensional_evaluator, RubricDimension,
+)
 
-# LLM judge — scores output against a rubric via LLM (async)
+# LLM judge — single overall score (async, returns 0.0-1.0)
 ev = llm_judge_evaluator(
     rubric="Codes must be specific, grounded in quotes, and cover all major themes.",
     judge_model="gpt-5-mini",
+    timeout=120,  # seconds per judge call (default: 120)
 )
 score = await ev(output, expected)  # returns 0.0-1.0
+
+# Dimensional judge — per-dimension scores + reasoning (async, returns EvalScore)
+ev = llm_judge_dimensional_evaluator(
+    dimensions=[
+        RubricDimension(name="clarity", description="Are names specific?", weight=1.0),
+        RubricDimension(name="depth", description="Latent patterns?", weight=1.0),
+    ],
+    judge_models=["gpt-4o", "claude-sonnet-4-5-20250929"],  # multi-judge averaging
+    timeout=120,
+)
+result = await ev(output, expected)  # EvalScore with .score, .dimension_scores, .reasoning
 
 # Cohen's kappa — compares code lists from output vs expected
 ev = kappa_evaluator(lambda r: r.codes)
@@ -93,7 +108,7 @@ ev = exact_match_evaluator()
 ev = contains_evaluator()
 ```
 
-The `llm_judge_evaluator` is async (uses LLM calls). The runner supports both sync and async evaluators transparently.
+LLM judge evaluators are async (use LLM calls). The runner supports both sync and async evaluators transparently. Judges use 0-100 integer scoring internally for better discrimination (converted to 0.0-1.0 on return). If all judge models fail, `RuntimeError` is raised (no silent zero scores).
 
 ## Optimization
 

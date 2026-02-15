@@ -38,8 +38,6 @@ async def run_experiment(
         EvalResult with all trials and per-variant summaries.
     """
     trials: list[Trial] = []
-    # Track (variant, input, run_idx) for retry
-    trial_specs: list[tuple[PromptVariant, ExperimentInput, int]] = []
 
     for variant in experiment.variants:
         for inp in experiment.inputs:
@@ -52,26 +50,6 @@ async def run_experiment(
                     variant, inp, experiment.response_model, evaluator,
                 )
                 trials.append(trial)
-                trial_specs.append((variant, inp, run_idx))
-
-    # Retry failed trials once (API issues are often transient)
-    retry_indices = [i for i, t in enumerate(trials) if t.error is not None]
-    if retry_indices:
-        logger.info("Retrying %d failed trial(s)...", len(retry_indices))
-        for idx in retry_indices:
-            variant, inp, run_idx = trial_specs[idx]
-            logger.info(
-                "Retrying %s / %s / run %d",
-                variant.name, inp.id, run_idx + 1,
-            )
-            trial = await _run_single_trial(
-                variant, inp, experiment.response_model, evaluator,
-            )
-            if trial.error is None:
-                trials[idx] = trial  # Replace failed trial with successful retry
-                logger.info("Retry succeeded for %s / %s", variant.name, inp.id)
-            else:
-                logger.warning("Retry also failed for %s / %s", variant.name, inp.id)
 
     # Warn about unreliable variants
     for variant in experiment.variants:
