@@ -114,12 +114,15 @@ async def _run_single_trial(
 
     start = time.monotonic()
     try:
+        trace_id = f"prompt_eval.run.{variant.name}.{inp.id}"
         if response_model is not None:
             result, meta = await acall_llm_structured(
                 variant.model,
                 messages,
                 response_model=response_model,
                 temperature=variant.temperature,
+                task="prompt_eval.run",
+                trace_id=trace_id,
                 **variant.kwargs,
             )
         else:
@@ -127,6 +130,8 @@ async def _run_single_trial(
                 variant.model,
                 messages,
                 temperature=variant.temperature,
+                task="prompt_eval.run",
+                trace_id=trace_id,
                 **variant.kwargs,
             )
             result = meta.content

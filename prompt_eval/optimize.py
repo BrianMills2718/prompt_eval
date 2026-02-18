@@ -263,6 +263,8 @@ async def instruction_search(
         rewrite_result = await acall_llm(
             rewrite_model,
             [{"role": "user", "content": rewrite_prompt}],
+            task="prompt_eval.optimize.rewrite",
+            trace_id=f"prompt_eval.optimize.rewrite.iter{iteration}",
         )
 
         # Parse rewrites (split on ---)
