@@ -265,6 +265,7 @@ async def instruction_search(
             [{"role": "user", "content": rewrite_prompt}],
             task="prompt_eval.optimize.rewrite",
             trace_id=f"prompt_eval.optimize.rewrite.iter{iteration}",
+            max_budget=0,
         )
 
         # Parse rewrites (split on ---)

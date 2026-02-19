@@ -211,6 +211,7 @@ def llm_judge_evaluator(
             timeout=timeout,
             task="prompt_eval.evaluate.judge",
             trace_id=f"prompt_eval.judge.{judge_model}.{output_hash}",
+            max_budget=0,
         )
 
         # Parse integer 0-100 score, convert to 0.0-1.0
@@ -330,6 +331,7 @@ def llm_judge_dimensional_evaluator(
                     timeout=timeout,
                     task="prompt_eval.evaluate.dimensional_judge",
                     trace_id=f"prompt_eval.dimensional_judge.{model}.{output_hash}",
+                    max_budget=0,
                 )
                 all_reasoning.append(f"[{model}] {verdict.reasoning}")
                 for ds in verdict.scores:

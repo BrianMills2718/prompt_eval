@@ -123,6 +123,7 @@ async def _run_single_trial(
                 temperature=variant.temperature,
                 task="prompt_eval.run",
                 trace_id=trace_id,
+                max_budget=0,
                 **variant.kwargs,
             )
         else:
@@ -132,6 +133,7 @@ async def _run_single_trial(
                 temperature=variant.temperature,
                 task="prompt_eval.run",
                 trace_id=trace_id,
+                max_budget=0,
                 **variant.kwargs,
             )
             result = meta.content
