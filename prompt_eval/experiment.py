@@ -14,6 +14,10 @@ class PromptVariant(BaseModel):
     messages: List[Dict[str, str]] = Field(
         description="Chat messages in OpenAI format [{'role': ..., 'content': ...}]"
     )
+    prompt_ref: Optional[str] = Field(
+        default=None,
+        description="Explicit prompt asset reference when this variant comes from a shared prompt library.",
+    )
     model: str = Field(default="gpt-5-mini", description="Model to use for this variant")
     temperature: float = Field(default=1.0)
     kwargs: Dict[str, Any] = Field(
@@ -27,6 +31,7 @@ class Trial(BaseModel):
 
     variant_name: str
     input_id: str
+    replicate: int = Field(default=0, description="Zero-based repeat index for this trial.")
     output: Any = Field(description="Raw LLM output (string or parsed model)")
     score: Optional[float] = Field(default=None, description="Metric score if evaluator provided")
     dimension_scores: Optional[Dict[str, float]] = Field(
@@ -39,12 +44,20 @@ class Trial(BaseModel):
     latency_ms: float = Field(default=0.0)
     tokens_used: int = Field(default=0)
     error: Optional[str] = Field(default=None)
+    trace_id: Optional[str] = Field(
+        default=None,
+        description="Shared observability trace identifier for this trial when recorded.",
+    )
 
 
 class EvalResult(BaseModel):
     """Aggregated results for an experiment."""
 
     experiment_name: str
+    execution_id: Optional[str] = Field(
+        default=None,
+        description="Shared execution-family identifier for this experiment invocation.",
+    )
     variants: List[str] = Field(default_factory=list)
     trials: List[Trial] = Field(default_factory=list)
     summary: Dict[str, VariantSummary] = Field(default_factory=dict)

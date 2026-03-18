@@ -1,0 +1,85 @@
+"""Shared pytest fixtures for prompt_eval tests.
+
+prompt_eval now emits llm_client observability records by default, so tests must
+isolate llm_client's backing state and environment from the real user machine.
+"""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
+
+from llm_client import io_log
+
+
+@pytest.fixture(autouse=True)
+def _isolate_llm_client_observability(tmp_path: Path) -> Iterator[None]:
+    """Isolate llm_client observability state for every prompt_eval test."""
+    old_enabled = io_log._enabled
+    old_root = io_log._data_root
+    old_project = io_log._project
+    old_db_path = io_log._db_path
+    old_db_conn = io_log._db_conn
+    old_run_timers = dict(io_log._run_timers)
+    active_token = io_log._active_experiment_run_id.set(None)
+    feature_profile_token = io_log._active_feature_profile.set(None)
+    old_enforcement_mode = os.environ.get("LLM_CLIENT_EXPERIMENT_ENFORCEMENT")
+    old_task_patterns = os.environ.get("LLM_CLIENT_EXPERIMENT_TASK_PATTERNS")
+    old_feature_profile = os.environ.get("LLM_CLIENT_FEATURE_PROFILE")
+    old_feature_enforcement_mode = os.environ.get("LLM_CLIENT_FEATURE_PROFILE_ENFORCEMENT")
+    old_feature_task_patterns = os.environ.get("LLM_CLIENT_FEATURE_PROFILE_TASK_PATTERNS")
+    old_agent_spec_enforcement_mode = os.environ.get("LLM_CLIENT_AGENT_SPEC_ENFORCEMENT")
+    old_agent_spec_task_patterns = os.environ.get("LLM_CLIENT_AGENT_SPEC_TASK_PATTERNS")
+
+    io_log._enabled = True
+    io_log._data_root = tmp_path
+    io_log._project = "prompt_eval_tests"
+    io_log._db_path = tmp_path / "prompt_eval_tests.db"
+    io_log._db_conn = None
+    io_log._run_timers.clear()
+
+    yield
+
+    io_log._enabled = old_enabled
+    io_log._data_root = old_root
+    io_log._project = old_project
+    io_log._db_path = old_db_path
+    if io_log._db_conn is not None:
+        io_log._db_conn.close()
+    io_log._db_conn = old_db_conn
+    io_log._run_timers.clear()
+    io_log._run_timers.update(old_run_timers)
+    io_log._active_experiment_run_id.reset(active_token)
+    io_log._active_feature_profile.reset(feature_profile_token)
+
+    if old_enforcement_mode is None:
+        os.environ.pop("LLM_CLIENT_EXPERIMENT_ENFORCEMENT", None)
+    else:
+        os.environ["LLM_CLIENT_EXPERIMENT_ENFORCEMENT"] = old_enforcement_mode
+    if old_task_patterns is None:
+        os.environ.pop("LLM_CLIENT_EXPERIMENT_TASK_PATTERNS", None)
+    else:
+        os.environ["LLM_CLIENT_EXPERIMENT_TASK_PATTERNS"] = old_task_patterns
+    if old_feature_profile is None:
+        os.environ.pop("LLM_CLIENT_FEATURE_PROFILE", None)
+    else:
+        os.environ["LLM_CLIENT_FEATURE_PROFILE"] = old_feature_profile
+    if old_feature_enforcement_mode is None:
+        os.environ.pop("LLM_CLIENT_FEATURE_PROFILE_ENFORCEMENT", None)
+    else:
+        os.environ["LLM_CLIENT_FEATURE_PROFILE_ENFORCEMENT"] = old_feature_enforcement_mode
+    if old_feature_task_patterns is None:
+        os.environ.pop("LLM_CLIENT_FEATURE_PROFILE_TASK_PATTERNS", None)
+    else:
+        os.environ["LLM_CLIENT_FEATURE_PROFILE_TASK_PATTERNS"] = old_feature_task_patterns
+    if old_agent_spec_enforcement_mode is None:
+        os.environ.pop("LLM_CLIENT_AGENT_SPEC_ENFORCEMENT", None)
+    else:
+        os.environ["LLM_CLIENT_AGENT_SPEC_ENFORCEMENT"] = old_agent_spec_enforcement_mode
+    if old_agent_spec_task_patterns is None:
+        os.environ.pop("LLM_CLIENT_AGENT_SPEC_TASK_PATTERNS", None)
+    else:
+        os.environ["LLM_CLIENT_AGENT_SPEC_TASK_PATTERNS"] = old_agent_spec_task_patterns

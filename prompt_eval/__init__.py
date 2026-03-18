@@ -17,6 +17,7 @@ from prompt_eval.experiment import (
     Trial,
     VariantSummary,
 )
+from prompt_eval.observability import PromptEvalObservabilityConfig
 from prompt_eval.optimize import (
     FewShotPool,
     OptimizeResult,
@@ -26,6 +27,8 @@ from prompt_eval.optimize import (
     instruction_search,
     optimize,
 )
+from prompt_eval.prompt_assets import build_prompt_variant_from_ref
+from prompt_eval.query import load_result_from_observability
 from prompt_eval.runner import run_experiment
 from prompt_eval.stats import compare_variants
 from prompt_eval.store import (
@@ -42,8 +45,11 @@ __all__ = [
     "ExperimentInput",
     "EvalResult",
     "PromptVariant",
+    "PromptEvalObservabilityConfig",
     "Trial",
     "VariantSummary",
+    "build_prompt_variant_from_ref",
+    "load_result_from_observability",
     # Runner
     "run_experiment",
     # Stats

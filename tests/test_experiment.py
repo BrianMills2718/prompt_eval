@@ -25,10 +25,12 @@ class TestPromptVariant:
         v = PromptVariant(
             name="custom",
             messages=[{"role": "user", "content": "hi"}],
+            prompt_ref="shared.extraction.entity_extract@2",
             model="claude-sonnet-4-5-20250929",
             temperature=0.5,
             kwargs={"max_tokens": 100},
         )
+        assert v.prompt_ref == "shared.extraction.entity_extract@2"
         assert v.model == "claude-sonnet-4-5-20250929"
         assert v.kwargs["max_tokens"] == 100
 
@@ -69,6 +71,7 @@ class TestTrial:
             score=0.9, cost=0.001, latency_ms=150, tokens_used=50,
         )
         assert t.error is None
+        assert t.replicate == 0
         assert t.score == 0.9
 
     def test_failed_trial(self):
@@ -92,5 +95,6 @@ class TestEvalResult:
 
     def test_empty(self):
         r = EvalResult(experiment_name="test")
+        assert r.execution_id is None
         assert r.trials == []
         assert r.summary == {}

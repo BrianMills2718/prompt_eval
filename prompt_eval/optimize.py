@@ -8,13 +8,9 @@ from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, Field
 
-from prompt_eval.experiment import (
-    EvalResult,
-    Experiment,
-    ExperimentInput,
-    PromptVariant,
-)
 from llm_client import acall_llm
+from prompt_eval.experiment import EvalResult, Experiment, ExperimentInput, PromptVariant
+from prompt_eval.observability import PromptEvalObservabilityConfig, _with_default_phase
 from prompt_eval.runner import run_experiment
 
 logger = logging.getLogger(__name__)
@@ -60,11 +56,13 @@ async def grid_search(
     evaluator: Callable[[Any, Optional[Any]], float],
     n_runs: int = 3,
     response_model: Any | None = None,
+    observability: bool | PromptEvalObservabilityConfig | None = True,
 ) -> OptimizeResult:
     """Exhaustive grid search over all combinations in the search space.
 
     Creates a single-variant Experiment for each combination, runs it,
-    and picks the winner by highest mean_score.
+    and picks the winner by highest mean_score. Shared observability is emitted
+    for each candidate run unless explicitly disabled.
     """
     combos = list(
         itertools.product(
@@ -98,7 +96,11 @@ async def grid_search(
             response_model=response_model,
         )
 
-        result = await run_experiment(experiment, evaluator=evaluator)
+        result = await run_experiment(
+            experiment,
+            evaluator=evaluator,
+            observability=_with_default_phase(observability, phase="grid_search"),
+        )
         all_results.append(result)
 
         summary = result.summary.get(name)
@@ -136,6 +138,7 @@ async def few_shot_selection(
     n_runs: int = 3,
     budget: int | None = None,
     response_model: Any | None = None,
+    observability: bool | PromptEvalObservabilityConfig | None = True,
 ) -> OptimizeResult:
     """Search over combinations of K examples from the pool.
 
@@ -150,6 +153,8 @@ async def few_shot_selection(
         n_runs: Runs per combination.
         budget: Max combinations to try. If None, tries all C(n, k).
         response_model: Optional Pydantic model for structured output.
+        observability: Shared llm_client observability behavior for the emitted
+            prompt-eval runs.
     """
     combos = list(itertools.combinations(pool.examples, pool.k))
     if budget is not None and len(combos) > budget:
@@ -179,7 +184,11 @@ async def few_shot_selection(
             response_model=response_model,
         )
 
-        result = await run_experiment(experiment, evaluator=evaluator)
+        result = await run_experiment(
+            experiment,
+            evaluator=evaluator,
+            observability=_with_default_phase(observability, phase="few_shot_selection"),
+        )
         all_results.append(result)
 
         summary = result.summary.get(name)
@@ -207,6 +216,7 @@ async def instruction_search(
     model: str = "gpt-5-mini",
     rewrite_model: str = "gpt-5-mini",
     response_model: Any | None = None,
+    observability: bool | PromptEvalObservabilityConfig | None = True,
 ) -> OptimizeResult:
     """Hill-climbing instruction search via LLM-generated rewrites.
 
@@ -224,6 +234,8 @@ async def instruction_search(
         model: Model to evaluate instructions with.
         rewrite_model: Model to generate rewrites with.
         response_model: Optional Pydantic model for structured output.
+        observability: Shared llm_client observability behavior for the emitted
+            prompt-eval runs.
     """
     all_results: list[EvalResult] = []
     current_best_instruction = base_instruction
@@ -243,7 +255,11 @@ async def instruction_search(
         n_runs=n_runs,
         response_model=response_model,
     )
-    base_result = await run_experiment(base_experiment, evaluator=evaluator)
+    base_result = await run_experiment(
+        base_experiment,
+        evaluator=evaluator,
+        observability=_with_default_phase(observability, phase="instruction_search"),
+    )
     all_results.append(base_result)
 
     summary = base_result.summary.get("iter0_base")
@@ -291,7 +307,11 @@ async def instruction_search(
                 n_runs=n_runs,
                 response_model=response_model,
             )
-            result = await run_experiment(experiment, evaluator=evaluator)
+            result = await run_experiment(
+                experiment,
+                evaluator=evaluator,
+                observability=_with_default_phase(observability, phase="instruction_search"),
+            )
             all_results.append(result)
 
             summary = result.summary.get(name)
@@ -322,6 +342,7 @@ async def optimize(
     n_runs: int = 3,
     budget: int | None = None,
     response_model: Any | None = None,
+    observability: bool | PromptEvalObservabilityConfig | None = True,
     **kwargs: Any,
 ) -> OptimizeResult:
     """Run an optimization strategy over the search space.
@@ -334,6 +355,8 @@ async def optimize(
         n_runs: Runs per combination.
         budget: Max combinations to try (few_shot_selection) or ignored (grid_search).
         response_model: Optional Pydantic model for structured output.
+        observability: Shared llm_client observability behavior for the emitted
+            prompt-eval runs.
         **kwargs: Strategy-specific arguments:
             few_shot_selection: pool (FewShotPool) — required.
             instruction_search: base_instruction (str) — required.
@@ -344,14 +367,25 @@ async def optimize(
     """
     if strategy == "grid_search":
         return await grid_search(
-            search_space, inputs, evaluator, n_runs=n_runs, response_model=response_model,
+            search_space,
+            inputs,
+            evaluator,
+            n_runs=n_runs,
+            response_model=response_model,
+            observability=observability,
         )
     elif strategy == "few_shot_selection":
         pool = kwargs.get("pool")
         if pool is None:
             raise ValueError("few_shot_selection requires 'pool' (FewShotPool) kwarg.")
         return await few_shot_selection(
-            pool, inputs, evaluator, n_runs=n_runs, budget=budget, response_model=response_model,
+            pool,
+            inputs,
+            evaluator,
+            n_runs=n_runs,
+            budget=budget,
+            response_model=response_model,
+            observability=observability,
         )
     elif strategy == "instruction_search":
         base_instruction = kwargs.get("base_instruction")
@@ -367,6 +401,7 @@ async def optimize(
             model=kwargs.get("model", "gpt-5-mini"),
             rewrite_model=kwargs.get("rewrite_model", "gpt-5-mini"),
             response_model=response_model,
+            observability=observability,
         )
     else:
         raise ValueError(f"Unknown strategy: '{strategy}'. Use 'grid_search', 'few_shot_selection', or 'instruction_search'.")

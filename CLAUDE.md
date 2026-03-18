@@ -17,6 +17,19 @@ prompt_eval/
   mcp_server.py   # FastMCP server with 4 tools, 4 built-in evaluators (not imported in __init__.py — requires fastmcp)
 ```
 
+## Boundary
+
+`prompt_eval` is the prompt-evaluation and optimization layer, not the shared
+runtime substrate. `llm_client` remains the authoritative execution and
+observability backend. Local JSON persistence in `store.py` is the current
+artifact/export path, but the target architecture is shared observability via
+`llm_client` with prompt_eval-specific semantics layered on top. See:
+
+- the shared ecosystem top-down architecture spec in the `llm_client` repo docs,
+- `docs/adr/0001-llm-client-substrate-boundary.md`
+- `docs/adr/0002-prompt-eval-run-family-mapping.md`
+- `docs/UNCERTAINTIES.md`
+
 ## How It Works
 
 1. **Define** an `Experiment` with `PromptVariant`s (prompt messages + model config) and `ExperimentInput`s (test cases with optional ground truth).

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from llm_client import LLMCallResult
+from llm_client.observability import get_run_items, get_runs
 
 from prompt_eval.experiment import (
     Experiment,
@@ -13,6 +14,7 @@ from prompt_eval.experiment import (
     Trial,
 )
 from prompt_eval.evaluators import EvalScore
+from prompt_eval.observability import PromptEvalObservabilityConfig
 from prompt_eval.runner import run_experiment, _substitute_input, _build_summaries
 
 
@@ -101,10 +103,10 @@ class TestRunExperiment:
             mock_llm.return_value = LLMCallResult(content="summary text", usage={"total_tokens": 50}, cost=0.001, model="test")
 
             result = await run_experiment(simple_experiment)
-
         # 2 variants * 1 input * 2 runs = 4 trials
         assert len(result.trials) == 4
         assert mock_llm.call_count == 4
+        assert result.execution_id is not None
         assert set(result.variants) == {"variant_a", "variant_b"}
 
     @pytest.mark.asyncio
@@ -339,3 +341,80 @@ class TestRunExperiment:
         for summary in result.summary.values():
             assert summary.corpus_score is None
             assert summary.corpus_dimension_scores is None
+
+    @pytest.mark.asyncio
+    async def test_emits_llm_client_runs_per_variant_and_replicate(self, simple_experiment):
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="summary text",
+                usage={"total_tokens": 50},
+                cost=0.001,
+                model="test",
+            )
+
+            result = await run_experiment(simple_experiment, evaluator=lambda output, expected: 0.85)
+
+        runs = get_runs(project="prompt_eval_tests", dataset="test_exp", limit=10)
+        assert len(runs) == 4
+        assert {run["condition_id"] for run in runs} == {"variant_a", "variant_b"}
+        assert {run["replicate"] for run in runs} == {0, 1}
+        assert {run["scenario_id"] for run in runs} == {"test_exp"}
+        assert {run["phase"] for run in runs} == {"evaluation"}
+        assert all(run["summary_metrics"]["avg_score"] == 85.0 for run in runs)
+        assert all(run["provenance"]["experiment_execution_id"] == result.execution_id for run in runs)
+
+        for run in runs:
+            items = get_run_items(run["run_id"])
+            assert len(items) == 1
+            assert items[0]["item_id"] == "doc1"
+            assert items[0]["metrics"]["score"] == 0.85
+            assert items[0]["trace_id"] == (
+                f"prompt_eval/{result.execution_id}/{run['condition_id']}/r{run['replicate']}/doc1"
+            )
+            assert items[0]["extra"]["tokens_used"] == 50
+
+    @pytest.mark.asyncio
+    async def test_observability_can_be_disabled(self, simple_experiment):
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="summary text",
+                usage={"total_tokens": 50},
+                cost=0.001,
+                model="test",
+            )
+
+            await run_experiment(simple_experiment, observability=False)
+
+        assert get_runs(project="prompt_eval_tests", limit=10) == []
+
+    @pytest.mark.asyncio
+    async def test_prompt_ref_is_recorded_in_run_provenance(self):
+        experiment = Experiment(
+            name="prompt_ref_exp",
+            variants=[
+                PromptVariant(
+                    name="shared_variant",
+                    prompt_ref="shared.extraction.entity_extract@2",
+                    messages=[{"role": "user", "content": "{input}"}],
+                ),
+            ],
+            inputs=[ExperimentInput(id="i1", content="test")],
+            n_runs=1,
+        )
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="summary text",
+                usage={"total_tokens": 50},
+                cost=0.001,
+                model="test",
+            )
+
+            config = PromptEvalObservabilityConfig(dataset="shared_dataset", project="my_proj")
+            await run_experiment(experiment, observability=config)
+
+        runs = get_runs(project="my_proj", dataset="shared_dataset", limit=5)
+        assert len(runs) == 1
+        provenance = runs[0]["provenance"]
+        assert provenance["prompt_ref"] == "shared.extraction.entity_extract@2"
+        assert provenance["prompt_source"] == "prompt_ref"
