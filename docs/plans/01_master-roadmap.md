@@ -3,7 +3,7 @@
 **Status:** 🚧 In Progress
 **Type:** program
 **Priority:** Highest
-**Blocked By:** Plan 03 decisions on prompt assets and package scope
+**Blocked By:** None
 **Blocks:** repo-wide execution clarity
 
 ---
@@ -160,10 +160,27 @@ true:
 - plan/index surface is real, not placeholder scaffolding
 - legacy meta-pattern notes are archived out of the canonical docs surface
 
+#### Program D: Explicit Experiment Semantics And Model Governance Alignment
+
+**Plan:** [05_model-governance-alignment.md](./05_model-governance-alignment.md)
+**Status:** In Progress
+
+**Success criteria:**
+
+- experiment-semantic choices are documented as explicit caller decisions rather
+  than hidden package defaults
+- subject-model defaults are removed from public experiment and optimizer
+  surfaces where the model choice affects what is being evaluated
+- explicit raw model IDs remain available as deliberate overrides for
+  model-comparison experiments
+- judge helpers may still use documented `llm_client` judging defaults when the
+  judge model is not itself under study
+- the remaining package-level model/default surfaces are tracked in a concrete
+  plan rather than left as undocumented drift
+
 ### Current Default Next Step
 
-There is no unblocked implementation slice inside `prompt_eval` until Program B
-is unlocked. The next real move must resolve one of:
-
-1. prompt asset adoption policy for inline-message compatibility,
-2. scope policy for non-prompt optimization inside or outside this package.
+Program D is the active unblocked program. The next implementation slice is to
+make subject-model choice fail loud across the remaining experiment and
+optimizer helpers while keeping Program B explicitly blocked on prompt-asset
+and package-scope decisions.

@@ -5,6 +5,7 @@ compatibility contracts in `prompt_eval`.
 
 - `0001-llm-client-substrate-boundary.md`
 - `0002-prompt-eval-run-family-mapping.md`
+- `0003-explicit-experiment-semantics.md`
 
 Related architecture docs:
 

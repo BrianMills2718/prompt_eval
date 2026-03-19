@@ -72,3 +72,20 @@ rows back into `VariantSummary.corpus_score` and
 `VariantSummary.corpus_dimension_scores`.  
 **Verified in:** `llm_client` experiment aggregate APIs, `prompt_eval.runner`,
 `prompt_eval.query`, and round-trip tests covering corpus metrics
+
+### U6: Should `prompt_eval` Hide Experiment-Semantic Choices Behind Defaults?
+
+**Status:** ✅ Resolved
+**Raised:** 2026-03-19
+**Resolved:** 2026-03-19
+**Resolution:** `prompt_eval` should prefer explicit declaration of
+experiment-semantic choices rather than silently choosing them through package
+defaults. In particular, the subject model for an experiment or optimization
+helper should be caller-declared, not invented by convenience behavior.
+`llm_client` task-selection buckets remain useful as internal helper vocabulary
+and policy/reporting categories, but they are not the main public
+experiment-design abstraction for this package. Operational defaults may remain
+for plumbing concerns and for judge helpers when the judge model is not itself
+under study.
+**Verified in:** `docs/adr/0003-explicit-experiment-semantics.md`,
+`docs/plans/05_model-governance-alignment.md`

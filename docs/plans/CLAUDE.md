@@ -6,10 +6,11 @@ Canonical planning surface for `prompt_eval`.
 
 | # | Plan | Priority | Status | Blocks |
 |---|------|----------|--------|--------|
-| 1 | [Prompt Eval Master Roadmap](01_master-roadmap.md) | Highest | 🚧 In Progress | 03 |
+| 1 | [Prompt Eval Master Roadmap](01_master-roadmap.md) | Highest | 🚧 In Progress | - |
 | 2 | [Shared Observability Boundary](02_shared-observability-boundary.md) | Highest | ✅ Complete | - |
 | 3 | [Prompt Asset And Scope Boundary](03_prompt-asset-and-scope-boundary.md) | High | ⏸️ Blocked | ecosystem prompt-asset adoption and scope decision |
 | 4 | [Documentation Surface Hardening](04_documentation-surface-hardening.md) | Medium | ✅ Complete | - |
+| 5 | [Explicit Experiment Semantics And Model Governance Alignment](05_model-governance-alignment.md) | High | 🚧 In Progress | - |
 
 ## Status Key
 
@@ -31,15 +32,10 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-There is no unblocked implementation slice inside `prompt_eval` today. The open
-program is Plan 03, and it is blocked on two explicit decisions:
-
-1. whether inline message lists are permanent compatibility input or a
-   deprecating path once prompt assets are broadly adopted,
-2. whether `prompt_eval` stays prompt-centric or expands into broader
-   non-prompt optimization.
-
-Do not invent new cleanup work while those remain unresolved.
+The active unblocked program is Plan 05: explicit experiment semantics and
+model-governance alignment. Plan 03 remains blocked on prompt-asset and
+package-scope decisions, but Plan 05 can proceed independently because it is
+about fail-loud experiment contracts, not prompt-asset adoption policy.
 
 ## Trivial Changes
 

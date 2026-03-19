@@ -38,9 +38,21 @@ Open boundary decisions:
   deprecated path once prompt assets are broadly adopted
 - whether `prompt_eval` stays strictly prompt-centric or grows into a broader
   non-prompt optimization package
+- how quickly to implement the already-decided explicit-parameter contract
+  across the remaining helper APIs
 
-Those decisions are tracked in [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md)
-and [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
+The model-governance direction itself is now decided: experiment-semantic
+choices such as the subject model should be declared explicitly rather than
+silently chosen by package defaults. Internal convenience defaults may remain
+for operational plumbing, including judge helpers when the judge model is not
+itself under study. That contract is recorded in
+[docs/adr/0003-explicit-experiment-semantics.md](docs/adr/0003-explicit-experiment-semantics.md)
+and tracked for implementation in
+[docs/plans/05_model-governance-alignment.md](docs/plans/05_model-governance-alignment.md).
+
+Open boundary decisions remain tracked in
+[docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
+[docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
 
 ## Quick Start
 
@@ -92,7 +104,7 @@ result = asyncio.run(
     )
 )
 
-comparison = compare_variants(result, "concise", "structured")
+comparison = compare_variants(result, "concise", "bullet")
 reloaded = load_result_from_observability(
     result.execution_id,
     project="prompt_eval_examples",

@@ -4,7 +4,7 @@ Observed problems, concerns, and technical debt. Items start as **unconfirmed**
 observations and get triaged through investigation into confirmed issues, plans,
 or dismissed.
 
-**Last reviewed:** 2026-03-18
+**Last reviewed:** 2026-03-19
 
 ---
 
@@ -60,6 +60,20 @@ tooling first so it matches `prompt_eval`'s real structure.
 ## Confirmed
 
 (Items that need a fix but don't have a plan yet.)
+
+### ISSUE-002: Model Governance Drift In Package Defaults
+
+**Observed:** 2026-03-19
+**Status:** `planned`
+
+`prompt_eval` still hardcodes raw model IDs in several package defaults and
+convenience entry points. The architecture direction is now explicit: package
+surfaces should not silently choose the subject model for an experiment.
+Explicit raw model IDs remain valid when model comparison is itself the point,
+and internal helpers may still use documented convenience defaults where the
+model choice is not part of the experiment semantics.
+
+**Plan:** `docs/plans/05_model-governance-alignment.md`
 
 ---
 
