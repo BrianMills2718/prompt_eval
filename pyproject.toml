@@ -14,8 +14,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "mypy>=1.10",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "ruff>=0.6.0",
 ]
 mcp = [
     "fastmcp>=0.1.0",
@@ -30,3 +32,12 @@ include = ["prompt_eval*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.mypy]
+files = ["prompt_eval", "tests"]
+mypy_path = "../llm_client"
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["fastmcp", "fastmcp.*"]
+ignore_missing_imports = true

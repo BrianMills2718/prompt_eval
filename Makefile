@@ -25,7 +25,10 @@ check:  ## Run all checks (test, mypy, lint)
 	@pytest tests/ -q --tb=short
 	@echo ""
 	@echo "Running mypy..."
-	@mypy src/ --ignore-missing-imports
+	@mypy prompt_eval tests
+	@echo ""
+	@echo "Running ruff..."
+	@ruff check prompt_eval tests
 	@echo ""
 	@echo "All checks passed!"
 
@@ -124,7 +127,10 @@ check:  ## Run all checks (test, mypy, lint)
 	@pytest tests/ -q --tb=short
 	@echo ""
 	@echo "Running mypy..."
-	@mypy src/ --ignore-missing-imports
+	@mypy prompt_eval tests
+	@echo ""
+	@echo "Running ruff..."
+	@ruff check prompt_eval tests
 	@echo ""
 	@echo "All checks passed!"
 

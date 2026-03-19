@@ -114,7 +114,9 @@ class TestRunExperiment:
         with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = LLMCallResult(content="summary text", usage={"total_tokens": 50}, cost=0.001, model="test")
 
-            evaluator = lambda output, expected: 0.85
+            def evaluator(output: object, expected: object) -> float:
+                return 0.85
+
             result = await run_experiment(simple_experiment, evaluator=evaluator)
 
         for trial in result.trials:
@@ -147,6 +149,61 @@ class TestRunExperiment:
         assert len(result.trials) == 1
         assert result.trials[0].output.text == "result"
         mock_llm.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_reserved_variant_kwargs_override_task_and_budget(self):
+        """Reserved variant kwargs should override llm call task/budget metadata."""
+
+        exp = Experiment(
+            name="task_budget_override",
+            variants=[
+                PromptVariant(
+                    name="v1",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    kwargs={
+                        "task": "onto_canon6.extraction.prompt_eval",
+                        "max_budget": 0.25,
+                        "max_tokens": 123,
+                    },
+                ),
+            ],
+            inputs=[ExperimentInput(id="i1", content="test")],
+            n_runs=1,
+        )
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="summary text",
+                usage={"total_tokens": 50},
+                cost=0.001,
+                model="test",
+            )
+
+            await run_experiment(
+                exp,
+                observability=PromptEvalObservabilityConfig(
+                    project="prompt_eval_runner_tests",
+                    dataset="task_budget_override_dataset",
+                ),
+            )
+
+        await_args = mock_llm.await_args
+        assert await_args is not None
+        assert await_args.kwargs["task"] == "onto_canon6.extraction.prompt_eval"
+        assert await_args.kwargs["max_budget"] == 0.25
+        assert await_args.kwargs["max_tokens"] == 123
+
+        runs = get_runs(
+            project="prompt_eval_runner_tests",
+            dataset="task_budget_override_dataset",
+            limit=5,
+        )
+        assert len(runs) == 1
+        assert runs[0]["provenance"]["task"] == "onto_canon6.extraction.prompt_eval"
+        assert runs[0]["provenance"]["llm_task"] == "onto_canon6.extraction.prompt_eval"
+        assert runs[0]["config"]["task"] == "onto_canon6.extraction.prompt_eval"
+        assert runs[0]["config"]["max_budget"] == 0.25
+        assert runs[0]["config"]["variant_kwargs"] == {"max_tokens": 123}
 
     @pytest.mark.asyncio
     async def test_llm_error_captured(self, simple_experiment):

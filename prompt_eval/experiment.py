@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,7 +22,11 @@ class PromptVariant(BaseModel):
     temperature: float = Field(default=1.0)
     kwargs: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Extra kwargs passed to llm_client (max_tokens, etc.)",
+        description=(
+            "Extra kwargs passed to llm_client (max_tokens, etc.). Reserved "
+            "keys `task` and `max_budget` override the default "
+            "`prompt_eval.run` call metadata."
+        ),
     )
 
 

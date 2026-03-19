@@ -1,4 +1,5 @@
 """Tests for prompt_eval.mcp_server."""
+# ruff: noqa: E402
 
 from __future__ import annotations
 

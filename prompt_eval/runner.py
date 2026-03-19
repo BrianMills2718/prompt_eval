@@ -38,6 +38,9 @@ from prompt_eval.observability import (
     _run_provenance_payload,
     _summary_metrics_for_run,
     _trace_id,
+    _variant_call_kwargs,
+    _variant_max_budget,
+    _variant_task,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,7 +93,7 @@ async def run_experiment(
                 run_id = start_observability_run(
                     dataset=observability_config.dataset or experiment.name,
                     model=variant.model,
-                    task="prompt_eval.run",
+                    task=_variant_task(variant),
                     config=_run_config_payload(variant=variant, experiment=experiment),
                     condition_id=variant.name,
                     seed=observability_config.seed,
@@ -255,20 +258,20 @@ async def _run_single_trial(
                 messages,
                 response_model=response_model,
                 temperature=variant.temperature,
-                task="prompt_eval.run",
+                task=_variant_task(variant),
                 trace_id=trace_id,
-                max_budget=0,
-                **variant.kwargs,
+                max_budget=_variant_max_budget(variant),
+                **_variant_call_kwargs(variant),
             )
         else:
             meta = await acall_llm(
                 variant.model,
                 messages,
                 temperature=variant.temperature,
-                task="prompt_eval.run",
+                task=_variant_task(variant),
                 trace_id=trace_id,
-                max_budget=0,
-                **variant.kwargs,
+                max_budget=_variant_max_budget(variant),
+                **_variant_call_kwargs(variant),
             )
             result = meta.content
 

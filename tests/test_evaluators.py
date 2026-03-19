@@ -100,7 +100,9 @@ class TestKappaEvaluator:
         class CodingResult(BaseModel):
             codes: list[str]
 
-        extractor = lambda r: r.codes if isinstance(r, CodingResult) else r
+        def extractor(result: CodingResult | list[str]) -> list[str]:
+            return result.codes if isinstance(result, CodingResult) else result
+
         evaluator = kappa_evaluator(extractor)
 
         # Identical codes → kappa = 1.0

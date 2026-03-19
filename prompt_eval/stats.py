@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass
-from typing import Optional
 
 from prompt_eval.experiment import EvalResult
 
@@ -172,7 +171,6 @@ def _welch_compare(
     df = num / denom if denom > 0 else 1
 
     # For df > 30, use z-approximation; otherwise use conservative z=2.0
-    alpha = 1 - confidence
     if df > 30:
         z = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}.get(confidence, 1.96)
     else:

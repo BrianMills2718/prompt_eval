@@ -17,6 +17,8 @@ from pydantic import BaseModel
 
 from prompt_eval.experiment import Experiment, ExperimentInput, PromptVariant, Trial
 
+_RESERVED_VARIANT_KWARGS = {"task", "max_budget"}
+
 
 @dataclass(frozen=True)
 class PromptEvalObservabilityConfig:
@@ -135,8 +137,10 @@ def _run_config_payload(
         if response_model_name is None:
             response_model_name = str(experiment.response_model)
     return {
+        "task": _variant_task(variant),
+        "max_budget": _variant_max_budget(variant),
         "temperature": variant.temperature,
-        "variant_kwargs": dict(variant.kwargs),
+        "variant_kwargs": _variant_call_kwargs(variant),
         "structured_output": experiment.response_model is not None,
         "response_model_name": response_model_name,
     }
@@ -164,6 +168,8 @@ def _run_provenance_payload(
         "corpus_evaluator_name": _evaluator_name(corpus_evaluator),
         "prompt_template_sha256": _message_template_sha256(variant.messages),
         "prompt_source": "prompt_ref" if variant.prompt_ref else "inline_messages",
+        "llm_task": _variant_task(variant),
+        "llm_max_budget": _variant_max_budget(variant),
     }
     if variant.prompt_ref is not None:
         provenance["prompt_ref"] = variant.prompt_ref
@@ -181,6 +187,47 @@ def _trace_id(
 ) -> str:
     """Build a hierarchical trace identifier shared by the call and item row."""
     return f"prompt_eval/{execution_id}/{condition_id}/r{replicate}/{item_id}"
+
+
+def _variant_task(variant: PromptVariant) -> str:
+    """Return the effective llm_client task for one variant.
+
+    `prompt_eval` defaults to `prompt_eval.run`, but experiments that proxy a
+    real downstream task should be able to preserve that task identity in both
+    the actual call contract and shared observability.
+    """
+
+    raw_task = variant.kwargs.get("task")
+    if raw_task is None:
+        return "prompt_eval.run"
+    normalized_task = str(raw_task).strip()
+    if not normalized_task:
+        raise ValueError("PromptVariant kwargs.task must not be blank when provided.")
+    return normalized_task
+
+
+def _variant_max_budget(variant: PromptVariant) -> float:
+    """Return the effective llm_client budget for one variant."""
+
+    raw_budget = variant.kwargs.get("max_budget")
+    if raw_budget is None:
+        return 0.0
+    if isinstance(raw_budget, bool) or not isinstance(raw_budget, (int, float)):
+        raise ValueError("PromptVariant kwargs.max_budget must be numeric when provided.")
+    normalized_budget = float(raw_budget)
+    if normalized_budget < 0.0:
+        raise ValueError("PromptVariant kwargs.max_budget must be >= 0.")
+    return normalized_budget
+
+
+def _variant_call_kwargs(variant: PromptVariant) -> dict[str, Any]:
+    """Return non-reserved per-call kwargs for one variant."""
+
+    return {
+        key: value
+        for key, value in variant.kwargs.items()
+        if key not in _RESERVED_VARIANT_KWARGS
+    }
 
 
 def _metrics_schema_for_run(run_trials: list[Trial]) -> list[str] | None:
