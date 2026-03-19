@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "prompt-eval"
 version = "0.2.0"
-description = "A/B prompt testing and evaluation. Compare prompt variants with statistical rigor."
+description = "A/B prompt testing and evaluation. Compare prompt variants with statistical methods."
 requires-python = ">=3.10"
 dependencies = [
     "llm-client>=0.3.0",

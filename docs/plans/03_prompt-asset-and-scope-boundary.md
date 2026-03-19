@@ -70,6 +70,39 @@ path or widening the package without a clear architectural mandate.
 4. Only after the boundary is explicit, implement any behavior or warning
    changes.
 
+### Unblock Conditions
+
+This plan is unblocked only when both of the following happen:
+
+1. **Inline-message policy decision**
+   - maintainership explicitly decides that inline messages are either:
+     - indefinite supported input, or
+     - a compatibility path with stated deprecation conditions.
+2. **Package-scope decision**
+   - maintainership explicitly decides whether `prompt_eval` remains
+     prompt-centric or broadens into non-prompt optimization.
+
+### Decision Ritual
+
+This blocker resolves only through the canonical control surface:
+
+- ADR, or
+- roadmap + uncertainty update approved by the maintainer.
+
+Do not treat ad hoc code changes or one-off downstream usage as resolution by
+themselves.
+
+### Evidence To Gather
+
+Useful inputs before making the decision:
+
+- whether maintained downstream users are actually adopting `prompt_ref` as
+  their primary path,
+- whether inline-message experiments are still common enough to justify
+  indefinite first-class support,
+- whether there is a concrete non-prompt optimization consumer that should live
+  in this package rather than beside it.
+
 ---
 
 ## Required Tests
@@ -105,4 +138,5 @@ If the blocker is resolved and implementation begins:
 
 This plan is blocked on product/ecosystem decisions, not missing mechanics.
 `prompt_eval` already supports both inline messages and explicit prompt assets.
-The missing piece is the long-term contract.
+The missing piece is the long-term contract and the decision ritual that locks
+it.

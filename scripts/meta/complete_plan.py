@@ -6,27 +6,29 @@ and records evidence before updating plan status.
 
 Usage:
     # Complete a plan (runs tests, records evidence, updates status)
-    python scripts/complete_plan.py --plan 35
+    python scripts/meta/complete_plan.py --plan 35
 
     # Dry run - check without updating
-    python scripts/complete_plan.py --plan 35 --dry-run
+    python scripts/meta/complete_plan.py --plan 35 --dry-run
 
     # Skip all E2E tests (for documentation-only plans)
-    python scripts/complete_plan.py --plan 35 --skip-e2e
+    python scripts/meta/complete_plan.py --plan 35 --skip-e2e
 
     # Skip only real E2E tests (actual LLM calls) but run smoke tests
-    python scripts/complete_plan.py --plan 35 --skip-real-e2e
+    python scripts/meta/complete_plan.py --plan 35 --skip-real-e2e
 
     # Re-verify an already-complete plan
-    python scripts/complete_plan.py --plan 35 --force
+    python scripts/meta/complete_plan.py --plan 35 --force
 
     # Complete a plan that requires human review
     # (after manual verification of checklist items)
-    python scripts/complete_plan.py --plan 40 --human-verified
+    python scripts/meta/complete_plan.py --plan 40 --human-verified
 
 Plans with a "## Human Review Required" section cannot be completed
 without the --human-verified flag. This ensures humans verify things
-that automated tests cannot check (visual correctness, UX, etc.).
+that automated tests cannot check (visual correctness, UX, etc.). This helper
+is inherited from a broader meta-process toolkit and may assume repository
+conventions that `prompt_eval` does not fully enforce.
 
 See meta/patterns/17_verification-enforcement.md for the full pattern.
 """
@@ -96,7 +98,7 @@ def print_human_review_instructions(
     print(section_content)
     print(f"{'-'*40}")
     print(f"\nAfter verifying all items above, run:")
-    print(f"\n  python scripts/complete_plan.py --plan {plan_number} --human-verified")
+    print(f"\n  python scripts/meta/complete_plan.py --plan {plan_number} --human-verified")
     print(f"\nThis confirms a human has checked things automated tests cannot verify.")
 
 
@@ -325,7 +327,7 @@ def update_plan_file(
 **Verified:** {timestamp}
 **Verification Evidence:**
 ```yaml
-completed_by: scripts/complete_plan.py
+completed_by: scripts/meta/complete_plan.py
 timestamp: {timestamp}
 tests:
   unit: {unit_summary}
