@@ -29,6 +29,9 @@ prompt-eval-mcp = "prompt_eval.mcp_server:main"
 [tool.setuptools.packages.find]
 include = ["prompt_eval*"]
 
+[tool.setuptools.package-data]
+prompt_eval = ["prompts/*.yaml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

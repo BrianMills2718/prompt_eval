@@ -181,21 +181,18 @@ true:
 #### Program E: Prompts As Data Cleanup
 
 **Plan:** [06_prompts-as-data-cleanup.md](./06_prompts-as-data-cleanup.md)
-**Status:** Planned
+**Status:** Complete
 
 **Success criteria:**
 
-- production LLM prompts in `prompt_eval` are stored as prompt assets rather
-  than embedded Python strings
-- judge and optimizer helper calls carry explicit prompt provenance where
-  applicable
+- production LLM prompts in `prompt_eval` are stored as YAML/Jinja templates
+  rather than embedded Python strings
+- judge and optimizer helper calls use explicit local template-path helpers
 - no prompt examples are added without explicit review
-- focused tests prove the prompt-asset-backed behavior remains intact
+- focused tests prove the template-backed behavior remains intact
 
 ### Current Default Next Step
 
-Program E is the active unblocked program. The next implementation slice is to
-move the remaining internal evaluator and optimizer prompts out of Python
-strings and into YAML/Jinja templates rendered through `llm_client`, while
-keeping Program B explicitly blocked on shared prompt-asset adoption and
-package-scope decisions.
+There is no further unblocked implementation slice in the current roadmap.
+Program B remains the only open program, and it is explicitly blocked on shared
+prompt-asset adoption evidence and the package-scope decision.

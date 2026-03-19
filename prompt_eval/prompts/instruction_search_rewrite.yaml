@@ -1,0 +1,13 @@
+name: instruction_search_rewrite
+version: "1.0"
+description: Internal rewrite-generation prompt for prompt_eval instruction search.
+messages:
+  - role: user
+    content: |
+      Rewrite this instruction to be more effective.
+      Generate exactly {{ n_rewrites }} alternative versions,
+      each on its own line, separated by '---'.
+      Keep the {input} placeholder if present.
+
+      Original instruction:
+      {{ current_best_instruction }}

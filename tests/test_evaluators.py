@@ -21,6 +21,10 @@ from prompt_eval.evaluators import (
     llm_judge_dimensional_evaluator,
     llm_judge_evaluator,
 )
+from prompt_eval.prompt_templates import (
+    DIMENSIONAL_JUDGE_TEMPLATE_PATH,
+    SCALAR_JUDGE_TEMPLATE_PATH,
+)
 
 
 class TestNormalize:
@@ -229,6 +233,26 @@ class TestLlmJudgeEvaluator:
             prompt = mock.call_args[0][1][0]["content"]
             assert "grounded in participant quotes" in prompt
 
+    async def test_uses_yaml_template(self) -> None:
+        with (
+            patch(
+                "prompt_eval.prompt_templates.render_prompt",
+                return_value=[{"role": "user", "content": "rendered judge prompt"}],
+            ) as mock_render,
+            patch("prompt_eval.evaluators.acall_llm") as mock,
+        ):
+            mock.return_value = LLMCallResult(
+                content="85",
+                usage={"total_tokens": 100},
+                cost=0.001,
+                model="test",
+            )
+            ev = llm_judge_evaluator(rubric="test")
+            await ev("output", expected="reference")
+
+        assert mock_render.call_args.kwargs["template_path"] == SCALAR_JUDGE_TEMPLATE_PATH
+        assert mock.call_args.args[1] == [{"role": "user", "content": "rendered judge prompt"}]
+
 
 class TestBuildDimensionsText:
     def test_basic(self) -> None:
@@ -399,3 +423,27 @@ class TestDimensionalEvaluator:
             await ev("raw output")
             prompt = mock.call_args[0][1][0]["content"]
             assert "FORMATTED: raw output" in prompt
+
+    async def test_uses_yaml_template(self, dimensions: list[RubricDimension]) -> None:
+        verdict = JudgeVerdict(
+            reasoning="Ok",
+            scores=[
+                DimensionScore(dimension="clarity", score=50),
+                DimensionScore(dimension="depth", score=50),
+            ],
+            overall_score=50,
+        )
+        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
+        with (
+            patch(
+                "prompt_eval.prompt_templates.render_prompt",
+                return_value=[{"role": "user", "content": "rendered dimensional prompt"}],
+            ) as mock_render,
+            patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock,
+        ):
+            mock.return_value = (verdict, mock_meta)
+            ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
+            await ev("output", expected="reference")
+
+        assert mock_render.call_args.kwargs["template_path"] == DIMENSIONAL_JUDGE_TEMPLATE_PATH
+        assert mock.call_args.args[1] == [{"role": "user", "content": "rendered dimensional prompt"}]

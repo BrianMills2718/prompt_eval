@@ -27,6 +27,8 @@ Implemented and verified:
 - statistical comparison via bootstrap confidence intervals or Welch's test
 - optimization helpers for grid search, few-shot selection, and instruction
   search
+- internal judge and instruction-search prompts stored as local YAML/Jinja
+  templates rendered through `llm_client`
 - dual-write into `llm_client` shared runs/items/aggregates
 - read-side reconstruction via `load_result_from_observability()`
 - prompt asset compatibility via `build_prompt_variant_from_ref()`

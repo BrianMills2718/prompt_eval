@@ -43,7 +43,7 @@ Current roadmap state:
 - Program C: documentation surface hardening complete
 - Program D: explicit experiment semantics and model-governance alignment
   complete
-- Program E: prompts-as-data cleanup planned
+- Program E: prompts-as-data cleanup complete
 
 Do not invent fresh cleanup work unless it ties to an active plan, issue, or
 new evidence.

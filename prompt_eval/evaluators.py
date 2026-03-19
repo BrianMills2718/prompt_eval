@@ -11,6 +11,10 @@ from typing import Any, Callable, Optional
 from pydantic import BaseModel, Field
 
 from llm_client import acall_llm, acall_llm_structured, get_model
+from prompt_eval.prompt_templates import (
+    render_dimensional_judge_messages,
+    render_scalar_judge_messages,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -147,30 +151,6 @@ def contains_evaluator(
     return evaluate
 
 
-_JUDGE_PROMPT = """Score the following output on a scale of 0 to 100.
-
-## Rubric
-{rubric}
-
-## Output to evaluate
-{output}
-
-{expected_section}
-
-## Instructions
-Respond with ONLY a single integer between 0 and 100.
-Do not include any other text, explanation, or formatting.
-
-Scoring guidance:
-- 90-100: Exceptional, no meaningful flaws
-- 70-89: Good, minor issues
-- 50-69: Adequate, notable gaps
-- 30-49: Below expectations, significant problems
-- 0-29: Poor, fundamental issues
-
-Be critical. Most outputs should score 50-80. Reserve 90+ for genuinely excellent work."""
-
-
 def llm_judge_evaluator(
     rubric: str,
     judge_model: str | None = None,
@@ -204,7 +184,7 @@ def llm_judge_evaluator(
             expected_str = output_formatter(expected) if output_formatter else str(expected)
             expected_section = f"## Reference (expected)\n{expected_str}"
 
-        prompt = _JUDGE_PROMPT.format(
+        messages = render_scalar_judge_messages(
             rubric=rubric,
             output=formatted_output,
             expected_section=expected_section,
@@ -213,7 +193,7 @@ def llm_judge_evaluator(
         output_hash = hashlib.sha256(formatted_output.encode()).hexdigest()[:8]
         result = await acall_llm(
             resolved_judge_model,
-            [{"role": "user", "content": prompt}],
+            messages,
             timeout=timeout,
             task="prompt_eval.evaluate.judge",
             trace_id=f"prompt_eval.judge.{resolved_judge_model}.{output_hash}",
@@ -241,35 +221,6 @@ def llm_judge_evaluator(
             )
 
     return evaluate
-
-
-_DIMENSIONAL_JUDGE_PROMPT = """You are a critical evaluator. Score the following output on multiple dimensions using a 0-100 integer scale.
-
-## Dimensions
-
-{dimensions_text}
-
-## Output to evaluate
-{output}
-
-{expected_section}
-
-## Instructions
-For each dimension, in your reasoning:
-1. Identify specific strengths
-2. Identify specific weaknesses, flaws, or missing elements
-3. Assign an integer score from 0 to 100
-
-Scoring guidance:
-- 90-100: Exceptional. No meaningful flaws.
-- 70-89: Good. Minor issues that don't undermine quality.
-- 50-69: Adequate. Notable gaps or weaknesses.
-- 30-49: Below expectations. Significant problems.
-- 0-29: Poor. Fundamental issues.
-
-Be critical. Most outputs should score 50-80. Reserve 90+ for genuinely excellent work. A score of 100 means you cannot identify a single flaw.
-
-The overall_score should be the weighted average of dimension scores."""
 
 
 def _build_dimensions_text(dimensions: list[RubricDimension]) -> str:
@@ -320,12 +271,11 @@ def llm_judge_dimensional_evaluator(
             expected_str = output_formatter(expected) if output_formatter else str(expected)
             expected_section = f"## Reference (expected)\n{expected_str}"
 
-        prompt = _DIMENSIONAL_JUDGE_PROMPT.format(
+        messages = render_dimensional_judge_messages(
             dimensions_text=dimensions_text,
             output=formatted_output,
             expected_section=expected_section,
         )
-        messages = [{"role": "user", "content": prompt}]
 
         all_dim_scores: dict[str, list[float]] = {dim.name: [] for dim in dimensions}
         all_reasoning: list[str] = []

@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from llm_client import acall_llm
 from prompt_eval.experiment import EvalResult, Experiment, ExperimentInput, PromptVariant
 from prompt_eval.observability import PromptEvalObservabilityConfig, _with_default_phase
+from prompt_eval.prompt_templates import render_instruction_rewrite_messages
 from prompt_eval.runner import run_experiment
 
 logger = logging.getLogger(__name__)
@@ -280,16 +281,13 @@ async def instruction_search(
 
     for iteration in range(n_iterations):
         # Generate rewrites
-        rewrite_prompt = (
-            f"Rewrite this instruction to be more effective. "
-            f"Generate exactly {n_rewrites} alternative versions, "
-            f"each on its own line, separated by '---'. "
-            f"Keep the {{input}} placeholder if present.\n\n"
-            f"Original instruction:\n{current_best_instruction}"
+        rewrite_messages = render_instruction_rewrite_messages(
+            n_rewrites=n_rewrites,
+            current_best_instruction=current_best_instruction,
         )
         rewrite_result = await acall_llm(
             rewrite_model,
-            [{"role": "user", "content": rewrite_prompt}],
+            rewrite_messages,
             task="prompt_eval.optimize.rewrite",
             trace_id=f"prompt_eval.optimize.rewrite.iter{iteration}",
             max_budget=0,

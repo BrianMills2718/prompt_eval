@@ -1,0 +1,28 @@
+name: llm_judge_scalar
+version: "1.0"
+description: Internal single-score judge prompt for prompt_eval.
+messages:
+  - role: user
+    content: |
+      Score the following output on a scale of 0 to 100.
+
+      ## Rubric
+      {{ rubric }}
+
+      ## Output to evaluate
+      {{ output }}
+
+      {% if expected_section %}{{ expected_section }}
+
+      {% endif %}## Instructions
+      Respond with ONLY a single integer between 0 and 100.
+      Do not include any other text, explanation, or formatting.
+
+      Scoring guidance:
+      - 90-100: Exceptional, no meaningful flaws
+      - 70-89: Good, minor issues
+      - 50-69: Adequate, notable gaps
+      - 30-49: Below expectations, significant problems
+      - 0-29: Poor, fundamental issues
+
+      Be critical. Most outputs should score 50-80. Reserve 90+ for genuinely excellent work.

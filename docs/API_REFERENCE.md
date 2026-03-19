@@ -54,7 +54,8 @@ Defined in:
 - `RubricDimension`
 
 These functions build per-trial evaluator callables. The LLM judge variants use
-`llm_client` and fail loudly when no judge produces a valid score.
+`llm_client`, render their internal prompts from local YAML templates, and fail
+loudly when no judge produces a valid score.
 
 Defined in [prompt_eval/evaluators.py](../prompt_eval/evaluators.py).
 
@@ -80,7 +81,8 @@ Defined in [prompt_eval/stats.py](../prompt_eval/stats.py).
 
 These are prompt-centric optimization helpers layered on top of the normal
 experiment runner. Subject-model choice is part of experiment semantics and
-should be declared deliberately by the caller.
+should be declared deliberately by the caller. `instruction_search()` also uses
+an internal YAML rewrite prompt rendered through `llm_client`.
 
 Defined in [prompt_eval/optimize.py](../prompt_eval/optimize.py).
 

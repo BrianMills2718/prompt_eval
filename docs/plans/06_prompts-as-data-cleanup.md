@@ -1,6 +1,6 @@
 # Plan 06: Prompts As Data Cleanup
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete
 **Type:** implementation
 **Priority:** Medium
 **Blocked By:** None
@@ -64,6 +64,14 @@ as inline strings creates policy drift and hides prompt identity.
 5. Refresh docs so `prompt_eval` no longer teaches inline Python prompts as the
    preferred path.
 
+### Thin Slice Status
+
+- [x] Phase 1: move the scalar judge prompt into a local YAML template
+- [x] Phase 2: move the dimensional judge prompt into a local YAML template
+- [x] Phase 3: move the instruction-search rewrite prompt into a local YAML template
+- [x] Phase 4: add focused template-path tests and package-data wiring
+- [x] Phase 5: refresh docs and roadmap status to match the implemented state
+
 ---
 
 ## Required Tests
@@ -86,11 +94,11 @@ as inline strings creates policy drift and hides prompt identity.
 
 ## Acceptance Criteria
 
-- [ ] Production LLM prompts in `prompt_eval` are stored as YAML/Jinja
+- [x] Production LLM prompts in `prompt_eval` are stored as YAML/Jinja
   templates rather than embedded Python strings
-- [ ] Judge and optimizer helper calls preserve current behavior
-- [ ] Prompt source is explicit and inspectable where these prompts are used
-- [ ] No new prompt examples are introduced without explicit review
+- [x] Judge and optimizer helper calls preserve current behavior
+- [x] Prompt source is explicit and inspectable where these prompts are used
+- [x] No new prompt examples are introduced without explicit review
 
 ---
 
@@ -100,3 +108,13 @@ This plan is intentionally narrow. It is about prompt storage and provenance,
 not broader redesign of evaluator or optimizer semantics. Shared `prompt_ref`
 provenance remains reserved for prompts that truly live in the shared
 `llm_client` prompt-asset namespace.
+
+Verified implementation:
+
+- `prompt_eval.prompt_templates` owns the local template-path constants and
+  render helpers.
+- `prompt_eval/prompts/*.yaml` stores the scalar judge, dimensional judge, and
+  instruction-search rewrite prompts as data.
+- `prompt_eval.evaluators` and `prompt_eval.optimize` render those templates
+  through `llm_client.render_prompt()`.
+- Focused tests assert the helper calls go through the expected template paths.

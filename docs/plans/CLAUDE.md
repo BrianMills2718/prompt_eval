@@ -11,7 +11,7 @@ Canonical planning surface for `prompt_eval`.
 | 3 | [Prompt Asset And Scope Boundary](03_prompt-asset-and-scope-boundary.md) | High | ⏸️ Blocked | ecosystem prompt-asset adoption and scope decision |
 | 4 | [Documentation Surface Hardening](04_documentation-surface-hardening.md) | Medium | ✅ Complete | - |
 | 5 | [Explicit Experiment Semantics And Model Governance Alignment](05_model-governance-alignment.md) | High | ✅ Complete | - |
-| 6 | [Prompts As Data Cleanup](06_prompts-as-data-cleanup.md) | Medium | 📋 Planned | - |
+| 6 | [Prompts As Data Cleanup](06_prompts-as-data-cleanup.md) | Medium | ✅ Complete | - |
 
 ## Status Key
 
@@ -33,8 +33,8 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-The active unblocked program is Plan 06: prompts-as-data cleanup. Plan 03
-remains blocked on shared prompt-asset adoption and package-scope decisions.
+There is no active unblocked implementation plan. Plan 03 remains blocked on
+shared prompt-asset adoption and package-scope decisions.
 
 ## Trivial Changes
 

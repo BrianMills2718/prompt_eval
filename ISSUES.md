@@ -76,25 +76,12 @@ surface beyond lightweight internal experimentation.
 
 (Items that need a fix but don't have a plan yet.)
 
-### ISSUE-003: Internal LLM Prompts Are Still Embedded In Python
-
-**Observed:** 2026-03-19
-**Status:** `planned`
-
-`prompt_eval` still embeds judge prompts and the instruction-rewrite prompt as
-Python strings in production code. That drifts from the ecosystem rule to keep
-prompts as data and makes prompt identity harder to inspect, share, and
-version.
-
-**Plan:** `docs/plans/06_prompts-as-data-cleanup.md`
-
----
-
 ## Resolved
 
 | ID | Description | Resolution | Date |
 |----|-------------|------------|------|
 | ISSUE-002 | Model Governance Drift In Package Defaults | Public experiment and optimizer surfaces now require explicit subject-model declaration; judge helpers keep only documented internal convenience defaults. | 2026-03-19 |
+| ISSUE-003 | Internal LLM Prompts Are Still Embedded In Python | Judge and instruction-search helper prompts now live as local YAML/Jinja templates rendered via `llm_client`, rather than inline Python strings. | 2026-03-19 |
 
 ---
 

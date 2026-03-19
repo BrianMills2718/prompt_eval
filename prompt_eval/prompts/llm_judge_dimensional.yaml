@@ -1,0 +1,33 @@
+name: llm_judge_dimensional
+version: "1.0"
+description: Internal dimensional structured judge prompt for prompt_eval.
+messages:
+  - role: user
+    content: |
+      You are a critical evaluator. Score the following output on multiple dimensions using a 0-100 integer scale.
+
+      ## Dimensions
+
+      {{ dimensions_text }}
+
+      ## Output to evaluate
+      {{ output }}
+
+      {% if expected_section %}{{ expected_section }}
+
+      {% endif %}## Instructions
+      For each dimension, in your reasoning:
+      1. Identify specific strengths
+      2. Identify specific weaknesses, flaws, or missing elements
+      3. Assign an integer score from 0 to 100
+
+      Scoring guidance:
+      - 90-100: Exceptional. No meaningful flaws.
+      - 70-89: Good. Minor issues that don't undermine quality.
+      - 50-69: Adequate. Notable gaps or weaknesses.
+      - 30-49: Below expectations. Significant problems.
+      - 0-29: Poor. Fundamental issues.
+
+      Be critical. Most outputs should score 50-80. Reserve 90+ for genuinely excellent work. A score of 100 means you cannot identify a single flaw.
+
+      The overall_score should be the weighted average of dimension scores.

@@ -20,6 +20,7 @@ from prompt_eval.optimize import (
     instruction_search,
     optimize,
 )
+from prompt_eval.prompt_templates import INSTRUCTION_REWRITE_TEMPLATE_PATH
 
 
 def _make_inputs() -> list[ExperimentInput]:
@@ -222,6 +223,34 @@ class TestInstructionSearch:
 
         assert result.strategy == "instruction_search"
         assert result.n_trials == 1  # only base evaluated
+
+    async def test_uses_yaml_template(self, mock_llm) -> None:
+        with (
+            patch(
+                "prompt_eval.prompt_templates.render_prompt",
+                return_value=[{"role": "user", "content": "rendered rewrite prompt"}],
+            ) as mock_render,
+            patch("prompt_eval.optimize.acall_llm") as rewrite_mock,
+        ):
+            rewrite_mock.return_value = LLMCallResult(
+                content="rewrite_a",
+                usage={"total_tokens": 10},
+                cost=0.0,
+                model="test",
+            )
+            await instruction_search(
+                base_instruction="do the thing: {input}",
+                inputs=_make_inputs(),
+                evaluator=_always_one,
+                n_iterations=1,
+                n_rewrites=1,
+                n_runs=1,
+                model=DEFAULT_MODEL,
+                rewrite_model=DEFAULT_REWRITE_MODEL,
+            )
+
+        assert mock_render.call_args.kwargs["template_path"] == INSTRUCTION_REWRITE_TEMPLATE_PATH
+        assert rewrite_mock.call_args.args[1] == [{"role": "user", "content": "rendered rewrite prompt"}]
 
 
 class TestOptimize:
