@@ -10,9 +10,12 @@ from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, Field
 
-from llm_client import acall_llm, acall_llm_structured
+from llm_client import acall_llm, acall_llm_structured, get_model
 
 logger = logging.getLogger(__name__)
+
+
+_JUDGE_SELECTION_TASK = "judging"
 
 
 @dataclass
@@ -170,7 +173,7 @@ Be critical. Most outputs should score 50-80. Reserve 90+ for genuinely excellen
 
 def llm_judge_evaluator(
     rubric: str,
-    judge_model: str = "gpt-5-mini",
+    judge_model: str | None = None,
     output_formatter: Callable[[Any], str] | None = None,
     timeout: int = 120,
 ) -> Callable:
@@ -182,7 +185,8 @@ def llm_judge_evaluator(
     Args:
         rubric: Scoring criteria. Can be anything: research questions,
             quality standards, a grading rubric, methodology requirements.
-        judge_model: Model to use as judge (default: gpt-5-mini).
+        judge_model: Explicit model override for the judge. When omitted,
+            resolves through ``llm_client.get_model("judging")``.
         output_formatter: Optional function to format the output before
             sending to the judge. If None, uses str().
         timeout: Timeout in seconds for the judge LLM call (default: 120).
@@ -190,6 +194,8 @@ def llm_judge_evaluator(
     Returns:
         Async evaluator function(output, expected) -> float.
     """
+    resolved_judge_model = judge_model or get_model(_JUDGE_SELECTION_TASK)
+
     async def evaluate(output: Any, expected: Any = None) -> float:
         formatted_output = output_formatter(output) if output_formatter else str(output)
 
@@ -206,11 +212,11 @@ def llm_judge_evaluator(
 
         output_hash = hashlib.sha256(formatted_output.encode()).hexdigest()[:8]
         result = await acall_llm(
-            judge_model,
+            resolved_judge_model,
             [{"role": "user", "content": prompt}],
             timeout=timeout,
             task="prompt_eval.evaluate.judge",
-            trace_id=f"prompt_eval.judge.{judge_model}.{output_hash}",
+            trace_id=f"prompt_eval.judge.{resolved_judge_model}.{output_hash}",
             max_budget=0,
         )
 
@@ -229,7 +235,10 @@ def llm_judge_evaluator(
                     raw = raw / 100.0
                 return max(0.0, min(1.0, raw))
             logger.warning("Judge returned unparseable score: %r", text)
-            return 0.0
+            raise RuntimeError(
+                "Judge model "
+                f"{resolved_judge_model!r} returned an unparseable score: {text!r}"
+            )
 
     return evaluate
 
@@ -288,8 +297,8 @@ def llm_judge_dimensional_evaluator(
 
     Args:
         dimensions: Scoring dimensions with descriptions and optional anchors.
-        judge_models: Models to use as judges (averaged if multiple).
-            Defaults to ["gpt-5-mini"].
+        judge_models: Explicit model overrides to use as judges (averaged if
+            multiple). Defaults to ``[get_model("judging")]``.
         output_formatter: Optional function to format output before judging.
         timeout: Timeout in seconds for each judge LLM call (default: 120).
 
@@ -297,7 +306,7 @@ def llm_judge_dimensional_evaluator(
         Async evaluator function(output, expected) -> EvalScore.
     """
     if judge_models is None:
-        judge_models = ["gpt-5-mini"]
+        judge_models = [get_model(_JUDGE_SELECTION_TASK)]
 
     dimensions_text = _build_dimensions_text(dimensions)
     weights = {dim.name: dim.weight for dim in dimensions}

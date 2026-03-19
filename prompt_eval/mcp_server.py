@@ -58,7 +58,7 @@ async def _run_experiment_impl(
     if evaluator_name == "llm_judge":
         if rubric is None:
             return {"error": "llm_judge evaluator requires a 'rubric' parameter"}
-        evaluator = llm_judge_evaluator(rubric, judge_model=judge_model or "gpt-5-mini")
+        evaluator = llm_judge_evaluator(rubric, judge_model=judge_model)
     elif evaluator_name is not None:
         evaluator = _BUILTIN_EVALUATORS.get(evaluator_name)
         if evaluator is None:
@@ -144,7 +144,7 @@ async def _evaluate_output_impl(
     if evaluator_name == "llm_judge":
         if rubric is None:
             return {"error": "llm_judge evaluator requires a 'rubric' parameter"}
-        evaluator = llm_judge_evaluator(rubric, judge_model=judge_model or "gpt-5-mini")
+        evaluator = llm_judge_evaluator(rubric, judge_model=judge_model)
         score = await evaluator(output, expected)
     elif evaluator_name in _BUILTIN_EVALUATORS:
         evaluator = _BUILTIN_EVALUATORS[evaluator_name]
@@ -172,7 +172,8 @@ async def run_experiment_tool(
         experiment_json: JSON string of an Experiment definition.
         evaluator_name: Optional evaluator ("exact_match", "contains", "kappa", "llm_judge").
         rubric: Scoring criteria for llm_judge evaluator (required if evaluator_name="llm_judge").
-        judge_model: Model for llm_judge (default: gpt-5-mini).
+        judge_model: Explicit model override for llm_judge. When omitted,
+            prompt_eval uses llm_client task-based judge selection.
     """
     return await _run_experiment_impl(experiment_json, evaluator_name, rubric, judge_model)
 
@@ -232,7 +233,8 @@ async def evaluate_output(
         evaluator_name: Evaluator to use ("exact_match", "contains", "kappa", "llm_judge").
         expected: Optional expected/reference output for comparison.
         rubric: Scoring criteria (required for llm_judge).
-        judge_model: Model for llm_judge (default: gpt-5-mini).
+        judge_model: Explicit model override for llm_judge. When omitted,
+            prompt_eval uses llm_client task-based judge selection.
     """
     return await _evaluate_output_impl(output, evaluator_name, expected, rubric, judge_model)
 

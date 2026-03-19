@@ -162,6 +162,21 @@ class TestLlmJudgeEvaluator:
             score = await ev("some output")
             assert score == 0.85
 
+    async def test_default_judge_model_uses_task_selection(self) -> None:
+        with (
+            patch("prompt_eval.evaluators.get_model", return_value="selected-judge"),
+            patch("prompt_eval.evaluators.acall_llm") as mock,
+        ):
+            mock.return_value = LLMCallResult(
+                content="85",
+                usage={"total_tokens": 100},
+                cost=0.001,
+                model="test",
+            )
+            ev = llm_judge_evaluator(rubric="test")
+            await ev("some output")
+            assert mock.call_args.args[0] == "selected-judge"
+
     async def test_clamps_to_range(self) -> None:
         with patch("prompt_eval.evaluators.acall_llm") as mock:
             mock.return_value = LLMCallResult(content="150", usage={"total_tokens": 100}, cost=0.001, model="test")
@@ -179,11 +194,12 @@ class TestLlmJudgeEvaluator:
             ev = llm_judge_evaluator(rubric="test")
             assert await ev("output") == 0.72
 
-    async def test_unparseable_returns_zero(self) -> None:
+    async def test_unparseable_raises(self) -> None:
         with patch("prompt_eval.evaluators.acall_llm") as mock:
             mock.return_value = LLMCallResult(content="I can't score this", usage={"total_tokens": 100}, cost=0.001, model="test")
             ev = llm_judge_evaluator(rubric="test")
-            assert await ev("output") == 0.0
+            with pytest.raises(RuntimeError, match="unparseable score"):
+                await ev("output")
 
     async def test_includes_expected_in_prompt(self) -> None:
         with patch("prompt_eval.evaluators.acall_llm") as mock:
@@ -263,6 +279,28 @@ class TestDimensionalEvaluator:
         assert result.dimension_scores["clarity"] == 0.8
         assert result.dimension_scores["depth"] == 0.6
         assert "Good output overall." in result.reasoning
+
+    async def test_default_dimensional_judge_uses_task_selection(
+        self,
+        dimensions: list[RubricDimension],
+    ) -> None:
+        verdict = JudgeVerdict(
+            reasoning="Good output overall.",
+            scores=[
+                DimensionScore(dimension="clarity", score=80),
+                DimensionScore(dimension="depth", score=60),
+            ],
+            overall_score=70,
+        )
+        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
+        with (
+            patch("prompt_eval.evaluators.get_model", return_value="selected-judge"),
+            patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock,
+        ):
+            mock.return_value = (verdict, mock_meta)
+            ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
+            await ev("some output")
+            assert mock.call_args.args[0] == "selected-judge"
 
     async def test_multi_judge_averages(self, dimensions: list[RubricDimension]) -> None:
         verdict_a = JudgeVerdict(
