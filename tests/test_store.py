@@ -40,7 +40,11 @@ def _make_experiment(name: str = "test_exp") -> Experiment:
     return Experiment(
         name=name,
         variants=[
-            PromptVariant(name="a", messages=[{"role": "user", "content": "say {input}"}]),
+            PromptVariant(
+                name="a",
+                messages=[{"role": "user", "content": "say {input}"}],
+                model="gemini/gemini-2.5-flash-lite",
+            ),
         ],
         inputs=[ExperimentInput(id="i1", content="hello")],
         n_runs=2,

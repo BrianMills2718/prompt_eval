@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from llm_client import LLMCallResult
 
@@ -34,6 +35,10 @@ def _score_by_model(output, expected=None) -> float:
     return 0.9 if output and "good" in str(output) else 0.3
 
 
+DEFAULT_MODEL = "gemini/gemini-2.5-flash-lite"
+DEFAULT_REWRITE_MODEL = "gpt-5-mini"
+
+
 # mock-ok: we're testing orchestration logic, not LLM calls
 @pytest.fixture
 def mock_llm():
@@ -46,6 +51,7 @@ class TestGridSearch:
     async def test_single_combo(self, mock_llm) -> None:
         space = SearchSpace(
             prompt_templates=[[{"role": "user", "content": "say {input}"}]],
+            models=[DEFAULT_MODEL],
         )
         result = await grid_search(space, _make_inputs(), _always_one, n_runs=1)
 
@@ -74,6 +80,7 @@ class TestGridSearch:
                 [{"role": "user", "content": "bad: {input}"}],
                 [{"role": "user", "content": "good: {input}"}],
             ],
+            models=[DEFAULT_MODEL],
         )
         result = await grid_search(space, _make_inputs(), _score_by_model, n_runs=1)
 
@@ -93,6 +100,7 @@ class TestGridSearch:
         space = SearchSpace(
             prompt_templates=[[{"role": "user", "content": "{input}"}]],
             temperatures=[0.0, 0.5, 1.0],
+            models=[DEFAULT_MODEL],
         )
         result = await grid_search(space, _make_inputs(), _always_one, n_runs=1)
         assert result.n_trials == 3
@@ -103,10 +111,15 @@ class TestGridSearch:
 
         space = SearchSpace(
             prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
         )
         result = await grid_search(space, _make_inputs(), _always_one, n_runs=1)
         assert result.best_score == 0.0
         assert result.n_trials == 1
+
+    def test_requires_explicit_models(self) -> None:
+        with pytest.raises(ValidationError, match="models"):
+            SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
 
 
 class TestInjectExamples:
@@ -132,6 +145,7 @@ class TestFewShotSelection:
             examples=["ex1", "ex2"],
             k=2,
             base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+            model=DEFAULT_MODEL,
         )
         result = await few_shot_selection(pool, _make_inputs(), _always_one, n_runs=1)
         assert result.strategy == "few_shot_selection"
@@ -143,6 +157,7 @@ class TestFewShotSelection:
             examples=["ex1", "ex2", "ex3"],
             k=2,
             base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+            model=DEFAULT_MODEL,
         )
         result = await few_shot_selection(pool, _make_inputs(), _always_one, n_runs=1)
         assert result.n_trials == 3  # C(3,2) = 3
@@ -152,9 +167,18 @@ class TestFewShotSelection:
             examples=["ex1", "ex2", "ex3", "ex4"],
             k=2,
             base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+            model=DEFAULT_MODEL,
         )
         result = await few_shot_selection(pool, _make_inputs(), _always_one, n_runs=1, budget=2)
         assert result.n_trials == 2  # budget caps at 2
+
+    def test_requires_explicit_model(self) -> None:
+        with pytest.raises(ValidationError, match="model"):
+            FewShotPool(
+                examples=["ex1", "ex2"],
+                k=2,
+                base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+            )
 
 
 class TestInstructionSearch:
@@ -171,6 +195,8 @@ class TestInstructionSearch:
                 n_iterations=1,
                 n_rewrites=2,
                 n_runs=1,
+                model=DEFAULT_MODEL,
+                rewrite_model=DEFAULT_REWRITE_MODEL,
             )
 
         assert result.strategy == "instruction_search"
@@ -190,6 +216,8 @@ class TestInstructionSearch:
                 n_iterations=1,
                 n_rewrites=2,
                 n_runs=1,
+                model=DEFAULT_MODEL,
+                rewrite_model=DEFAULT_REWRITE_MODEL,
             )
 
         assert result.strategy == "instruction_search"
@@ -200,16 +228,21 @@ class TestOptimize:
     async def test_grid_search_strategy(self, mock_llm) -> None:
         space = SearchSpace(
             prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
         )
         result = await optimize(space, _make_inputs(), _always_one, strategy="grid_search", n_runs=1)
         assert result.strategy == "grid_search"
 
     async def test_few_shot_strategy(self, mock_llm) -> None:
-        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        space = SearchSpace(
+            prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
+        )
         pool = FewShotPool(
             examples=["ex1", "ex2"],
             k=2,
             base_messages=[{"role": "user", "content": "{examples}\n\n{input}"}],
+            model=DEFAULT_MODEL,
         )
         result = await optimize(
             space, _make_inputs(), _always_one,
@@ -218,12 +251,18 @@ class TestOptimize:
         assert result.strategy == "few_shot_selection"
 
     async def test_few_shot_missing_pool_raises(self) -> None:
-        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        space = SearchSpace(
+            prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
+        )
         with pytest.raises(ValueError, match="requires 'pool'"):
             await optimize(space, _make_inputs(), _always_one, strategy="few_shot_selection")
 
     async def test_instruction_search_strategy(self, mock_llm) -> None:
-        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        space = SearchSpace(
+            prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
+        )
         with patch("prompt_eval.optimize.acall_llm") as rewrite_mock:
             rewrite_mock.return_value = LLMCallResult(content="rewrite_a", usage={"total_tokens": 10}, cost=0.0, model="test")
 
@@ -231,17 +270,53 @@ class TestOptimize:
                 space, _make_inputs(), _always_one,
                 strategy="instruction_search", n_runs=1,
                 base_instruction="do: {input}", n_iterations=1, n_rewrites=1,
+                model=DEFAULT_MODEL,
+                rewrite_model=DEFAULT_REWRITE_MODEL,
             )
         assert result.strategy == "instruction_search"
 
     async def test_instruction_search_missing_instruction_raises(self) -> None:
-        space = SearchSpace(prompt_templates=[[{"role": "user", "content": "{input}"}]])
+        space = SearchSpace(
+            prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
+        )
         with pytest.raises(ValueError, match="requires 'base_instruction'"):
             await optimize(space, _make_inputs(), _always_one, strategy="instruction_search")
+
+    async def test_instruction_search_missing_model_raises(self) -> None:
+        space = SearchSpace(
+            prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
+        )
+        with pytest.raises(ValueError, match="requires explicit 'model'"):
+            await optimize(
+                space,
+                _make_inputs(),
+                _always_one,
+                strategy="instruction_search",
+                base_instruction="do: {input}",
+                rewrite_model=DEFAULT_REWRITE_MODEL,
+            )
+
+    async def test_instruction_search_missing_rewrite_model_raises(self) -> None:
+        space = SearchSpace(
+            prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
+        )
+        with pytest.raises(ValueError, match="requires explicit 'rewrite_model'"):
+            await optimize(
+                space,
+                _make_inputs(),
+                _always_one,
+                strategy="instruction_search",
+                base_instruction="do: {input}",
+                model=DEFAULT_MODEL,
+            )
 
     async def test_unknown_strategy_raises(self) -> None:
         space = SearchSpace(
             prompt_templates=[[{"role": "user", "content": "{input}"}]],
+            models=[DEFAULT_MODEL],
         )
         with pytest.raises(ValueError, match="Unknown strategy"):
             await optimize(space, _make_inputs(), _always_one, strategy="magic")

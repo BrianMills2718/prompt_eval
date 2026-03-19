@@ -19,8 +19,8 @@ def build_prompt_variant_from_ref(
     name: str,
     prompt_ref: str,
     *,
+    model: str,
     render_context: Mapping[str, Any] | None = None,
-    model: str = "gpt-5-mini",
     temperature: float = 1.0,
     kwargs: Mapping[str, Any] | None = None,
 ) -> PromptVariant:
@@ -34,7 +34,7 @@ def build_prompt_variant_from_ref(
             Prompt assets intended for ``prompt_eval`` should preserve the
             literal ``{input}`` placeholder so the runner can substitute each
             experiment input later.
-        model: Model identifier for the variant.
+        model: Explicit subject model identifier for the variant.
         temperature: Sampling temperature passed through to ``llm_client``.
         kwargs: Extra per-call kwargs forwarded to ``llm_client``.
 

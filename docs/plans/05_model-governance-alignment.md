@@ -1,6 +1,6 @@
 # Plan 05: Explicit Experiment Semantics And Model Governance Alignment
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Type:** implementation
 **Priority:** High
 **Blocked By:** None
@@ -42,7 +42,11 @@ friction-free convenience.
 - `prompt_eval/evaluators.py`
 - `prompt_eval/experiment.py`
 - `prompt_eval/optimize.py`
+- `prompt_eval/prompt_assets.py`
 - `prompt_eval/mcp_server.py`
+- `tests/test_experiment.py`
+- `tests/test_optimize.py`
+- `tests/test_prompt_assets.py`
 - `docs/adr/0003-explicit-experiment-semantics.md`
 - `llm_client/models.py`
 
@@ -54,12 +58,17 @@ friction-free convenience.
 - `prompt_eval/mcp_server.py`
 - `prompt_eval/experiment.py`
 - `prompt_eval/optimize.py`
+- `prompt_eval/prompt_assets.py`
 - `README.md`
+- `docs/API_REFERENCE.md`
 - `AGENTS.md`
 - `docs/plans/01_master-roadmap.md`
 - `docs/plans/CLAUDE.md`
 - `tests/test_evaluators.py`
 - `tests/test_mcp_server.py`
+- `tests/test_experiment.py`
+- `tests/test_optimize.py`
+- `tests/test_prompt_assets.py`
 
 ---
 
@@ -85,9 +94,10 @@ friction-free convenience.
   `judge_model`/`judge_models` override is provided
 - [x] Phase 2: record the explicit-experiment-semantics architecture decision
   in ADRs, roadmap, and operator docs
-- [ ] Phase 3: make subject-model choice fail loud in `PromptVariant`,
-  `SearchSpace`, `FewShotPool`, and instruction-search helpers
-- [ ] Phase 4: refresh public docs/examples and MCP-facing language to match
+- [x] Phase 3: make subject-model choice fail loud in `PromptVariant`,
+  `SearchSpace`, `FewShotPool`, `build_prompt_variant_from_ref()`, and
+  instruction-search helpers
+- [x] Phase 4: refresh public docs/examples and MCP-facing language to match
   the final fail-loud contract
 
 ---
@@ -100,7 +110,9 @@ friction-free convenience.
 |-----------|---------------|------------------|
 | `tests/test_evaluators.py` | `test_default_judge_model_uses_task_selection` | single-score judge defaults resolve through `llm_client` policy |
 | `tests/test_evaluators.py` | `test_default_dimensional_judge_uses_task_selection` | dimensional judge defaults resolve through `llm_client` policy |
-| `tests/test_runner.py` or focused model-default tests | new fail-loud omission tests | experiment/optimizer helpers no longer silently choose subject models |
+| `tests/test_experiment.py` | new fail-loud omission tests | `PromptVariant` no longer silently chooses a subject model |
+| `tests/test_optimize.py` | new fail-loud omission tests | optimization helpers no longer silently choose subject models |
+| `tests/test_prompt_assets.py` | new fail-loud omission tests | prompt-asset helper requires explicit subject model |
 
 ### Existing Tests (Must Pass)
 
@@ -118,11 +130,12 @@ friction-free convenience.
 - [x] Explicit raw `judge_model` and `judge_models` overrides still work
 - [x] The repo documents that experiment-semantic choices should be explicit
   rather than hidden behind package defaults
-- [ ] Public experiment and optimization helpers stop silently choosing the
+- [x] Public experiment and optimization helpers stop silently choosing the
   subject model
-- [ ] Remaining raw-model/default surfaces are classified as either legitimate
+- [x] Remaining raw-model/default surfaces are classified as either legitimate
   override surfaces or migration candidates
-- [ ] Public docs explain the semantic-versus-operational default distinction
+- [x] Public docs and examples teach explicit subject-model choice instead of
+  compatibility defaults
 
 ---
 
@@ -132,3 +145,12 @@ This plan does **not** assume `prompt_eval` can eliminate all raw model IDs.
 That would be the wrong goal. Experiments often need explicit model comparison.
 The real goal is to stop silently choosing experiment-semantic parameters while
 preserving explicit override surfaces for real experiment design.
+
+Verified implementation now covers:
+
+- `PromptVariant.model` is caller-required.
+- `SearchSpace.models` and `FewShotPool.model` are caller-required.
+- `instruction_search()` and `optimize(..., strategy="instruction_search")`
+  fail loudly unless `model` and `rewrite_model` are explicitly provided.
+- `build_prompt_variant_from_ref()` requires an explicit subject model.
+- README/API docs and MCP-facing tests reflect the final contract.

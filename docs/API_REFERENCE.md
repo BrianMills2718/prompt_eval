@@ -10,8 +10,8 @@ look next.
   Defines one experiment family: variants, inputs, number of replicates, and
   optional structured response model.
 - `PromptVariant`
-  One variant under test. Carries `messages`, optional `prompt_ref`, model
-  choice, temperature, and per-call `kwargs`.
+  One variant under test. Carries `messages`, optional `prompt_ref`, explicit
+  subject-model choice, temperature, and per-call `kwargs`.
 - `ExperimentInput`
   One dataset item under evaluation, with optional `expected` value for
   scoring.
@@ -79,16 +79,18 @@ Defined in [prompt_eval/stats.py](../prompt_eval/stats.py).
 - `OptimizeResult`
 
 These are prompt-centric optimization helpers layered on top of the normal
-experiment runner.
+experiment runner. Subject-model choice is part of experiment semantics and
+should be declared deliberately by the caller.
 
 Defined in [prompt_eval/optimize.py](../prompt_eval/optimize.py).
 
 ## Prompt Assets
 
-- `build_prompt_variant_from_ref(name, prompt_ref, *, render_context=None, ...)`
+- `build_prompt_variant_from_ref(name, prompt_ref, *, model, render_context=None, ...)`
 
 Turns an explicit shared `prompt_ref` into a normal `PromptVariant` while
-preserving prompt identity in observability provenance.
+preserving prompt identity in observability provenance. The preferred usage is
+to pass the subject model explicitly.
 
 Defined in [prompt_eval/prompt_assets.py](../prompt_eval/prompt_assets.py).
 

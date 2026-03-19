@@ -20,6 +20,7 @@ class TestBuildPromptVariantFromRef:
         variant = build_prompt_variant_from_ref(
             name="shared_bullet_variant",
             prompt_ref="shared.summarize.bullet@1",
+            model="gemini/gemini-2.5-flash-lite",
             render_context={"bullet_count": 3},
             kwargs={"max_tokens": 120},
         )
@@ -31,11 +32,20 @@ class TestBuildPromptVariantFromRef:
             "Summarize the following text as 3 bullet points.\n\n{input}"
         )
 
+    def test_requires_explicit_model(self) -> None:
+        with pytest.raises(TypeError, match="model"):
+            build_prompt_variant_from_ref(
+                name="shared_bullet_variant",
+                prompt_ref="shared.summarize.bullet@1",
+                render_context={"bullet_count": 3},
+            )
+
     @pytest.mark.asyncio
     async def test_run_experiment_uses_built_prompt_asset_variant(self) -> None:
         variant = build_prompt_variant_from_ref(
             name="shared_bullet_variant",
             prompt_ref="shared.summarize.bullet@1",
+            model="gemini/gemini-2.5-flash-lite",
             render_context={"bullet_count": 2},
         )
         experiment = Experiment(

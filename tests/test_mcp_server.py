@@ -61,7 +61,13 @@ class TestRunExperimentTool:
 
         exp = Experiment(
             name="mcp_test",
-            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            variants=[
+                PromptVariant(
+                    name="v1",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                )
+            ],
             inputs=[ExperimentInput(id="i1", content="hi")],
             n_runs=1,
         )
@@ -73,7 +79,13 @@ class TestRunExperimentTool:
     async def test_unknown_evaluator(self, mock_llm) -> None:
         exp = Experiment(
             name="test",
-            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            variants=[
+                PromptVariant(
+                    name="v1",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                )
+            ],
             inputs=[ExperimentInput(id="i1", content="hi")],
             n_runs=1,
         )
@@ -86,7 +98,13 @@ class TestRunExperimentTool:
 
         exp = Experiment(
             name="kappa_test",
-            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            variants=[
+                PromptVariant(
+                    name="v1",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                )
+            ],
             inputs=[ExperimentInput(id="i1", content="hi", expected=["code_a", "code_b"])],
             n_runs=1,
         )
@@ -101,7 +119,13 @@ class TestRunExperimentTool:
 
         exp = Experiment(
             name="judge_test",
-            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            variants=[
+                PromptVariant(
+                    name="v1",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                )
+            ],
             inputs=[ExperimentInput(id="i1", content="hi")],
             n_runs=1,
         )
@@ -119,7 +143,13 @@ class TestRunExperimentTool:
     async def test_llm_judge_requires_rubric(self, mock_llm) -> None:
         exp = Experiment(
             name="test",
-            variants=[PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}])],
+            variants=[
+                PromptVariant(
+                    name="v1",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                )
+            ],
             inputs=[ExperimentInput(id="i1", content="hi")],
             n_runs=1,
         )

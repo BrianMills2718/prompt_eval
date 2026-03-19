@@ -38,8 +38,6 @@ Open boundary decisions:
   deprecated path once prompt assets are broadly adopted
 - whether `prompt_eval` stays strictly prompt-centric or grows into a broader
   non-prompt optimization package
-- how quickly to implement the already-decided explicit-parameter contract
-  across the remaining helper APIs
 
 The model-governance direction itself is now decided: experiment-semantic
 choices such as the subject model should be declared explicitly rather than
@@ -47,8 +45,9 @@ silently chosen by package defaults. Internal convenience defaults may remain
 for operational plumbing, including judge helpers when the judge model is not
 itself under study. That contract is recorded in
 [docs/adr/0003-explicit-experiment-semantics.md](docs/adr/0003-explicit-experiment-semantics.md)
-and tracked for implementation in
-[docs/plans/05_model-governance-alignment.md](docs/plans/05_model-governance-alignment.md).
+and implemented through the public experiment and optimization surfaces. The
+remaining prompt-policy drift is tracked separately in
+[docs/plans/06_prompts-as-data-cleanup.md](docs/plans/06_prompts-as-data-cleanup.md).
 
 Open boundary decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
@@ -59,6 +58,7 @@ Open boundary decisions remain tracked in
 ```python
 import asyncio
 
+from llm_client import get_model
 from prompt_eval import (
     Experiment,
     ExperimentInput,
@@ -70,18 +70,22 @@ from prompt_eval import (
     run_experiment,
 )
 
+subject_model = get_model("synthesis")
+
 experiment = Experiment(
     name="tone_eval",
     variants=[
         build_prompt_variant_from_ref(
             name="concise",
             prompt_ref="shared.summarize.concise@1",
+            model=subject_model,
             render_context={"style": "executive"},
             kwargs={"task": "prompt_eval.summary", "max_budget": 1.0},
         ),
         build_prompt_variant_from_ref(
             name="bullet",
             prompt_ref="shared.summarize.bullet@1",
+            model=subject_model,
             render_context={"bullet_count": 3},
             kwargs={"task": "prompt_eval.summary", "max_budget": 1.0},
         ),
@@ -116,6 +120,9 @@ Notes:
 
 - The preferred long-term path is explicit prompt assets. Use
   `build_prompt_variant_from_ref()` when a shared `prompt_ref` already exists.
+- Choose the subject model explicitly. The example uses `get_model(...)` as an
+  explicit caller decision, but raw model overrides are also valid when model
+  comparison is itself the point of the experiment.
 - Inline message lists still work for compatibility or one-off experiments.
 - `kwargs["task"]` and `kwargs["max_budget"]` override the default
   `prompt_eval.run` call metadata and flow through to `llm_client`.

@@ -18,7 +18,12 @@ class PromptVariant(BaseModel):
         default=None,
         description="Explicit prompt asset reference when this variant comes from a shared prompt library.",
     )
-    model: str = Field(default="gpt-5-mini", description="Model to use for this variant")
+    model: str = Field(
+        description=(
+            "Explicit subject model for this variant. This is part of the "
+            "experiment semantics and must be caller-declared."
+        )
+    )
     temperature: float = Field(default=1.0)
     kwargs: Dict[str, Any] = Field(
         default_factory=dict,

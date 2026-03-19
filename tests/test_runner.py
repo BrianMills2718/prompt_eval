@@ -82,6 +82,7 @@ class TestRunExperiment:
                 PromptVariant(
                     name="variant_a",
                     messages=[{"role": "user", "content": "Summarize: {input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
                 ),
                 PromptVariant(
                     name="variant_b",
@@ -89,6 +90,7 @@ class TestRunExperiment:
                         {"role": "system", "content": "Be concise."},
                         {"role": "user", "content": "Summarize: {input}"},
                     ],
+                    model="gemini/gemini-2.5-flash-lite",
                 ),
             ],
             inputs=[
@@ -133,7 +135,11 @@ class TestRunExperiment:
         exp = Experiment(
             name="structured",
             variants=[
-                PromptVariant(name="v1", messages=[{"role": "user", "content": "{input}"}]),
+                PromptVariant(
+                    name="v1",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                ),
             ],
             inputs=[ExperimentInput(id="i1", content="test")],
             n_runs=1,
@@ -160,6 +166,7 @@ class TestRunExperiment:
                 PromptVariant(
                     name="v1",
                     messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
                     kwargs={
                         "task": "onto_canon6.extraction.prompt_eval",
                         "max_budget": 0.25,
@@ -453,6 +460,7 @@ class TestRunExperiment:
                     name="shared_variant",
                     prompt_ref="shared.extraction.entity_extract@2",
                     messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
                 ),
             ],
             inputs=[ExperimentInput(id="i1", content="test")],

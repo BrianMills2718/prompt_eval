@@ -163,7 +163,7 @@ true:
 #### Program D: Explicit Experiment Semantics And Model Governance Alignment
 
 **Plan:** [05_model-governance-alignment.md](./05_model-governance-alignment.md)
-**Status:** In Progress
+**Status:** Complete
 
 **Success criteria:**
 
@@ -178,9 +178,24 @@ true:
 - the remaining package-level model/default surfaces are tracked in a concrete
   plan rather than left as undocumented drift
 
+#### Program E: Prompts As Data Cleanup
+
+**Plan:** [06_prompts-as-data-cleanup.md](./06_prompts-as-data-cleanup.md)
+**Status:** Planned
+
+**Success criteria:**
+
+- production LLM prompts in `prompt_eval` are stored as prompt assets rather
+  than embedded Python strings
+- judge and optimizer helper calls carry explicit prompt provenance where
+  applicable
+- no prompt examples are added without explicit review
+- focused tests prove the prompt-asset-backed behavior remains intact
+
 ### Current Default Next Step
 
-Program D is the active unblocked program. The next implementation slice is to
-make subject-model choice fail loud across the remaining experiment and
-optimizer helpers while keeping Program B explicitly blocked on prompt-asset
-and package-scope decisions.
+Program E is the active unblocked program. The next implementation slice is to
+move the remaining internal evaluator and optimizer prompts out of Python
+strings and into YAML/Jinja templates rendered through `llm_client`, while
+keeping Program B explicitly blocked on shared prompt-asset adoption and
+package-scope decisions.

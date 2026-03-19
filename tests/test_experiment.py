@@ -1,5 +1,8 @@
 """Tests for experiment data models."""
 
+import pytest
+from pydantic import ValidationError
+
 from prompt_eval.experiment import (
     Experiment,
     ExperimentInput,
@@ -12,12 +15,19 @@ from prompt_eval.experiment import (
 
 class TestPromptVariant:
 
+    def test_requires_explicit_model(self):
+        with pytest.raises(ValidationError, match="model"):
+            PromptVariant(
+                name="test",
+                messages=[{"role": "user", "content": "hello"}],
+            )
+
     def test_defaults(self):
         v = PromptVariant(
             name="test",
             messages=[{"role": "user", "content": "hello"}],
+            model="gemini/gemini-2.5-flash-lite",
         )
-        assert v.model == "gpt-5-mini"
         assert v.temperature == 1.0
         assert v.kwargs == {}
 
@@ -41,7 +51,11 @@ class TestExperiment:
         exp = Experiment(
             name="test",
             variants=[
-                PromptVariant(name="a", messages=[{"role": "user", "content": "hi"}]),
+                PromptVariant(
+                    name="a",
+                    messages=[{"role": "user", "content": "hi"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                ),
             ],
         )
         assert exp.n_runs == 3
@@ -52,7 +66,11 @@ class TestExperiment:
         exp = Experiment(
             name="test",
             variants=[
-                PromptVariant(name="a", messages=[{"role": "user", "content": "{input}"}]),
+                PromptVariant(
+                    name="a",
+                    messages=[{"role": "user", "content": "{input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                ),
             ],
             inputs=[
                 ExperimentInput(id="i1", content="hello"),

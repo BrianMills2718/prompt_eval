@@ -55,25 +55,38 @@ the mismatch still exists in the tooling itself.
 meta-process automation as a required workflow, localize or simplify that
 tooling first so it matches `prompt_eval`'s real structure.
 
+### ISSUE-004: Statistical Engine Remains Hand-Rolled
+
+**Observed:** 2026-03-19
+**Status:** `monitoring`
+
+`prompt_eval.stats` currently uses local bootstrap and Welch-style comparison
+logic instead of an off-the-shelf statistics library. That is acceptable for
+lightweight internal comparison, but if the package needs externally defensible
+inference or stronger guarantees, the current implementation should be replaced
+with `scipy` or `statsmodels`.
+
+**Trigger to act:** if `prompt_eval` starts making stronger statistical claims,
+needs additional statistical methods, or becomes a higher-stakes decision
+surface beyond lightweight internal experimentation.
+
 ---
 
 ## Confirmed
 
 (Items that need a fix but don't have a plan yet.)
 
-### ISSUE-002: Model Governance Drift In Package Defaults
+### ISSUE-003: Internal LLM Prompts Are Still Embedded In Python
 
 **Observed:** 2026-03-19
 **Status:** `planned`
 
-`prompt_eval` still hardcodes raw model IDs in several package defaults and
-convenience entry points. The architecture direction is now explicit: package
-surfaces should not silently choose the subject model for an experiment.
-Explicit raw model IDs remain valid when model comparison is itself the point,
-and internal helpers may still use documented convenience defaults where the
-model choice is not part of the experiment semantics.
+`prompt_eval` still embeds judge prompts and the instruction-rewrite prompt as
+Python strings in production code. That drifts from the ecosystem rule to keep
+prompts as data and makes prompt identity harder to inspect, share, and
+version.
 
-**Plan:** `docs/plans/05_model-governance-alignment.md`
+**Plan:** `docs/plans/06_prompts-as-data-cleanup.md`
 
 ---
 
@@ -81,7 +94,7 @@ model choice is not part of the experiment semantics.
 
 | ID | Description | Resolution | Date |
 |----|-------------|------------|------|
-| - | - | - | - |
+| ISSUE-002 | Model Governance Drift In Package Defaults | Public experiment and optimizer surfaces now require explicit subject-model declaration; judge helpers keep only documented internal convenience defaults. | 2026-03-19 |
 
 ---
 

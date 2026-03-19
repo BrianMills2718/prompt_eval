@@ -88,4 +88,5 @@ experiment-design abstraction for this package. Operational defaults may remain
 for plumbing concerns and for judge helpers when the judge model is not itself
 under study.
 **Verified in:** `docs/adr/0003-explicit-experiment-semantics.md`,
-`docs/plans/05_model-governance-alignment.md`
+`docs/plans/05_model-governance-alignment.md`, `prompt_eval.experiment`,
+`prompt_eval.optimize`, and `prompt_eval.prompt_assets`

@@ -41,8 +41,9 @@ Current roadmap state:
 - Program B: prompt asset and scope boundary blocked on ecosystem/product
   decisions
 - Program C: documentation surface hardening complete
-- Program D: explicit experiment semantics and model-governance alignment in
-  progress
+- Program D: explicit experiment semantics and model-governance alignment
+  complete
+- Program E: prompts-as-data cleanup planned
 
 Do not invent fresh cleanup work unless it ties to an active plan, issue, or
 new evidence.

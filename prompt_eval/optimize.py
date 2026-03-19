@@ -17,12 +17,17 @@ logger = logging.getLogger(__name__)
 
 
 class SearchSpace(BaseModel):
-    """Defines the space of prompt/model/temperature combinations to search."""
+    """Defines the explicit prompt/model/temperature combinations to search."""
 
     prompt_templates: list[list[dict[str, str]]] = Field(
         description="Message lists to try (each is an OpenAI chat messages list)"
     )
-    models: list[str] = Field(default=["gpt-5-mini"])
+    models: list[str] = Field(
+        description=(
+            "Explicit candidate subject models to compare. This is part of the "
+            "experiment semantics and must not be hidden behind a default."
+        )
+    )
     temperatures: list[float] = Field(default=[1.0])
     kwargs_variants: list[dict[str, Any]] = Field(default=[{}])
 
@@ -36,7 +41,12 @@ class FewShotPool(BaseModel):
         description="Base message template. Use {examples} placeholder where examples should be injected."
     )
     separator: str = Field(default="\n\n", description="Separator between examples")
-    model: str = Field(default="gpt-5-mini")
+    model: str = Field(
+        description=(
+            "Explicit subject model used when evaluating example combinations. "
+            "This affects the experiment semantics and must be caller-declared."
+        )
+    )
     temperature: float = Field(default=1.0)
 
 
@@ -210,11 +220,12 @@ async def instruction_search(
     base_instruction: str,
     inputs: list[ExperimentInput],
     evaluator: Callable[[Any, Optional[Any]], float],
+    *,
     n_iterations: int = 5,
     n_rewrites: int = 3,
     n_runs: int = 3,
-    model: str = "gpt-5-mini",
-    rewrite_model: str = "gpt-5-mini",
+    model: str,
+    rewrite_model: str,
     response_model: Any | None = None,
     observability: bool | PromptEvalObservabilityConfig | None = True,
 ) -> OptimizeResult:
@@ -231,8 +242,8 @@ async def instruction_search(
         n_iterations: Number of hill-climbing iterations.
         n_rewrites: Number of rewrites to generate per iteration.
         n_runs: Runs per candidate instruction.
-        model: Model to evaluate instructions with.
-        rewrite_model: Model to generate rewrites with.
+        model: Explicit subject model to evaluate instructions with.
+        rewrite_model: Explicit model to generate rewrites with.
         response_model: Optional Pydantic model for structured output.
         observability: Shared llm_client observability behavior for the emitted
             prompt-eval runs.
@@ -398,10 +409,22 @@ async def optimize(
             n_iterations=kwargs.get("n_iterations", 5),
             n_rewrites=kwargs.get("n_rewrites", 3),
             n_runs=n_runs,
-            model=kwargs.get("model", "gpt-5-mini"),
-            rewrite_model=kwargs.get("rewrite_model", "gpt-5-mini"),
+            model=_require_instruction_search_model(kwargs, "model"),
+            rewrite_model=_require_instruction_search_model(kwargs, "rewrite_model"),
             response_model=response_model,
             observability=observability,
         )
     else:
         raise ValueError(f"Unknown strategy: '{strategy}'. Use 'grid_search', 'few_shot_selection', or 'instruction_search'.")
+
+
+def _require_instruction_search_model(kwargs: dict[str, Any], key: str) -> str:
+    """Extract a required instruction-search model override or fail loudly."""
+
+    value = kwargs.get(key)
+    if not isinstance(value, str) or not value:
+        raise ValueError(
+            f"instruction_search requires explicit '{key}' (str); "
+            "subject-model defaults are not implicit"
+        )
+    return value

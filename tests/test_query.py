@@ -23,10 +23,12 @@ class TestLoadResultFromObservability:
                     name="variant_a",
                     prompt_ref="shared.extraction.entity_extract@2",
                     messages=[{"role": "user", "content": "Summarize: {input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
                 ),
                 PromptVariant(
                     name="variant_b",
                     messages=[{"role": "user", "content": "Explain: {input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
                 ),
             ],
             inputs=[
