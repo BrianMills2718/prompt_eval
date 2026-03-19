@@ -1,0 +1,169 @@
+# Plan 01: Prompt Eval Master Roadmap
+
+**Status:** 🚧 In Progress
+**Type:** program
+**Priority:** Highest
+**Blocked By:** Plan 03 decisions on prompt assets and package scope
+**Blocks:** repo-wide execution clarity
+
+---
+
+## Gap
+
+**Current:** `prompt_eval` already has real architectural decisions and real
+integration work, but until this cleanup it had no trustworthy roadmap. The
+repo taught a placeholder plan index, duplicated stale root docs, and no clear
+answer to "what remains versus what is already done?"
+
+**Target:** one canonical roadmap states:
+
+1. what `prompt_eval` is,
+2. which long-term programs are complete versus still open,
+3. what counts as success or failure for each program,
+4. whether there is an unblocked next slice or a real blocker.
+
+**Why:** without that control surface, the repo drifts into either fake
+"everything is planned" scaffolding or endless one-slice-at-a-time execution
+with no durable source of truth.
+
+---
+
+## References Reviewed
+
+- `README.md` - repo-level overview and boundary statement
+- `docs/UNCERTAINTIES.md` - real open versus resolved architecture questions
+- `docs/adr/0001-llm-client-substrate-boundary.md` - substrate boundary
+- `docs/adr/0002-prompt-eval-run-family-mapping.md` - shared run mapping
+- `prompt_eval/runner.py` - experiment execution path
+- `prompt_eval/query.py` - shared read-side reconstruction
+- `prompt_eval/prompt_assets.py` - explicit prompt asset bridge
+
+---
+
+## Files Affected
+
+- `README.md` (active docs contract)
+- `AGENTS.md` (repo-operating instructions)
+- `CLAUDE.md` (thin pointer)
+- `docs/plans/CLAUDE.md` (plan index)
+- `docs/plans/02_shared-observability-boundary.md`
+- `docs/plans/03_prompt-asset-and-scope-boundary.md`
+- `docs/plans/04_documentation-surface-hardening.md`
+- `docs/UNCERTAINTIES.md`
+
+---
+
+## Plan
+
+### Steps
+
+1. Keep the shared observability boundary documented as complete once its
+   acceptance criteria remain true.
+2. Keep the prompt-asset and scope boundary explicit as the one open program.
+3. Keep documentation cleanup recorded as a completed program instead of
+   rediscovering the same drift repeatedly.
+4. Update the roadmap only when a new real program appears or an existing
+   blocker is resolved.
+
+### Canonical Execution Rule
+
+Agents working in `prompt_eval` should:
+
+1. anchor implementation work to this roadmap and one child plan,
+2. define acceptance criteria before editing code,
+3. continue through consecutive unblocked slices after each passing checkpoint,
+4. stop only for:
+   - a real blocker,
+   - a user reprioritization,
+   - an unresolved design decision that repo context cannot settle.
+
+Passing one thin slice is not, by itself, a reason to stop.
+
+---
+
+## Required Tests
+
+### New Tests (TDD)
+
+Documentation-only program. No new runtime tests required.
+
+### Existing Tests (Must Pass)
+
+| Test Pattern | Why |
+|--------------|-----|
+| `python scripts/meta/sync_plan_status.py --check` | Plan index and plan files stay consistent |
+| markdown link scan over active docs | Canonical docs stop pointing at missing files |
+
+---
+
+## Acceptance Criteria
+
+- [x] One canonical roadmap exists for `prompt_eval`
+- [x] Child plans reflect real completed or blocked programs
+- [x] The roadmap states whether there is a default next slice or a real blocker
+- [x] Root operator docs and plan docs agree on current repo state
+
+---
+
+## Notes
+
+### Repo-Level Definition Of Done
+
+The long-term `prompt_eval` program is done only when all of the following are
+true:
+
+1. `prompt_eval` is consistently described as the prompt-evaluation and
+   optimization layer rather than a second runtime substrate.
+2. Shared `llm_client` observability is the authoritative execution record for
+   experiment families.
+3. Prompt identity is explicit and queryable when prompt assets exist, with
+   inline messages treated either as compatibility input or intentionally
+   retained policy.
+4. Package scope remains intentionally prompt-centric rather than drifting into
+   generic workflow or non-prompt optimization.
+5. The docs/plans/operator surface is canonical, compact, and low-drift.
+
+### Program Order
+
+#### Program A: Shared Observability Boundary
+
+**Plan:** [02_shared-observability-boundary.md](./02_shared-observability-boundary.md)  
+**Status:** Complete
+
+**Success criteria:**
+
+- prompt_eval emits authoritative shared runs/items/aggregates into
+  `llm_client`
+- `load_result_from_observability()` reconstructs prompt_eval result families
+- corpus-level metrics survive the shared backend round-trip
+
+#### Program B: Prompt Asset And Scope Boundary
+
+**Plan:** [03_prompt-asset-and-scope-boundary.md](./03_prompt-asset-and-scope-boundary.md)  
+**Status:** Blocked
+
+**Success criteria:**
+
+- explicit prompt assets are the preferred documented path
+- inline message compatibility policy is decided and documented
+- the package scope boundary for non-prompt optimization is explicit
+
+#### Program C: Documentation Surface Hardening
+
+**Plan:** [04_documentation-surface-hardening.md](./04_documentation-surface-hardening.md)  
+**Status:** Complete
+
+**Success criteria:**
+
+- README exists and is current
+- AGENTS/CLAUDE no longer duplicate large stale content
+- plan/index surface is real, not placeholder scaffolding
+- legacy meta-pattern notes are archived out of the canonical docs surface
+
+### Current Default Next Step
+
+There is no unblocked implementation slice inside `prompt_eval` until Program B
+is unlocked. The next real move must resolve one of:
+
+1. prompt asset adoption policy for inline-message compatibility,
+2. scope policy for non-prompt optimization inside or outside this package.

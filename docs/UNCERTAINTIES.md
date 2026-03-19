@@ -3,6 +3,10 @@
 This document tracks the unresolved questions specific to `prompt_eval` after
 ADR 0001 established the package boundary against `llm_client`.
 
+Canonical execution order lives in
+[`docs/plans/01_master-roadmap.md`](plans/01_master-roadmap.md). This file is
+only for open or resolved architecture questions, not for sequencing work.
+
 ## Current Assumptions
 
 1. `prompt_eval` keeps owning prompt-specific evaluation and optimization

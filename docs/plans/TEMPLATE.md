@@ -1,7 +1,7 @@
-# Plan #N: [Name]
+# Plan NN: [Name]
 
-**Status:** Planned
-**Type:** implementation  <!-- implementation | design -->
+**Status:** 📋 Planned
+**Type:** implementation  <!-- implementation | design | program -->
 **Priority:** High | Medium | Low
 **Blocked By:** None
 **Blocks:** None
@@ -20,21 +20,21 @@
 
 ## References Reviewed
 
-> **REQUIRED:** Cite specific code/docs reviewed before planning.
+> Cite the specific files and docs reviewed before planning.
 
-- `src/example.py:45-89` - existing implementation
-- `docs/architecture/current/example.md` - current design
-- `CLAUDE.md` - project conventions
+- `prompt_eval/example.py:10-40` - current implementation
+- `docs/UNCERTAINTIES.md` - boundary or open-question context
+- `README.md` - repo-level contract
 
 ---
 
 ## Files Affected
 
-> **REQUIRED:** Declare upfront what files will be touched.
+> Declare likely touch points upfront.
 
-- src/example.py (modify)
-- src/new_feature.py (create)
-- tests/test_feature.py (create)
+- `prompt_eval/example.py` (modify)
+- `tests/test_example.py` (create/modify)
+- `docs/plans/NN_example.md` (update while executing)
 
 ---
 
@@ -42,10 +42,9 @@
 
 ### Steps
 
-1. Create X
-2. Modify Y
-3. Add tests
-4. Update docs
+1. State the thinnest first slice
+2. State the integration point that gets verified when wired
+3. State the next slice only if the first one passes
 
 ---
 
@@ -55,26 +54,28 @@
 
 | Test File | Test Function | What It Verifies |
 |-----------|---------------|------------------|
-| `tests/test_example.py` | `test_happy_path` | Basic functionality works |
-| `tests/test_example.py` | `test_error_case` | Errors handled correctly |
+| `tests/test_example.py` | `test_happy_path` | Basic behavior works |
 
 ### Existing Tests (Must Pass)
 
 | Test Pattern | Why |
 |--------------|-----|
-| `tests/test_related.py` | Integration unchanged |
+| `pytest tests/test_related.py -q` | Nearby behavior stays intact |
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Required tests pass
-- [ ] Full test suite passes
-- [ ] Type check passes
-- [ ] Docs updated
+- [ ] Focused tests pass
+- [ ] Existing integration points pass when wired
+- [ ] Docs and uncertainty notes are updated if the boundary changed
 
 ---
 
 ## Notes
 
-[Design decisions, alternatives considered, risks]
+- Call out real blockers, assumptions, and risks.
+- Do not leave `prompt_eval/` changes unlabeled as "trivial."
+- Match verification commands to this repo's real structure; `prompt_eval` does
+  not currently have a formal `tests/e2e/` hierarchy or a relationship
+  validator like `llm_client`.

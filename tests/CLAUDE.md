@@ -1,53 +1,33 @@
-# Tests Directory
+# Tests
 
-pytest test suite organized by test type.
+`prompt_eval` keeps its pytest suite flat under [`tests/`](.).
 
-## Structure
+## Current Layout
 
-```
-tests/
-├── conftest.py           # Global fixtures
-├── unit/                 # Single component tests
-├── integration/          # Multiple components together
-└── e2e/                  # Full system tests
-```
+| File | Purpose |
+|------|---------|
+| `conftest.py` | Shared fixtures, including isolated `llm_client` observability state |
+| `test_runner.py` | Experiment execution and observability emission |
+| `test_query.py` | Shared-backend reconstruction |
+| `test_prompt_assets.py` | Prompt asset integration |
+| `test_optimize.py` | Search strategies |
+| `test_evaluators.py` | Evaluator factories and scoring helpers |
+| `test_stats.py` | Statistical comparison |
+| `test_store.py` | Local JSON persistence |
+| `test_mcp_server.py` | Optional MCP server behavior |
+| `test_experiment.py` | Core model contracts |
 
 ## Running Tests
 
 ```bash
-# All tests
 pytest tests/ -v
-
-# By type
-pytest tests/unit/ -v
-pytest tests/integration/ -v
-pytest tests/e2e/ -v
-
-# By plan (if using plan markers)
-pytest --plan N tests/
-
-# Single test
-pytest tests/unit/test_example.py::TestClass::test_method -v
+pytest tests/test_runner.py tests/test_query.py -q
+pytest -q --collect-only
 ```
 
-## Test Types
+## Notes
 
-| Type | Purpose | Speed |
-|------|---------|-------|
-| **Unit** | Single class/function | Fast |
-| **Integration** | Multiple components | Medium |
-| **E2E** | Full system | Slow |
-
-## Conventions
-
-1. **Use fixtures** from `conftest.py` for common setup
-2. **Real tests preferred** - Avoid mocks when possible
-3. **Fast execution** - Unit suite should run in seconds
-4. **Mark with plan** - Use `@pytest.mark.plans(N)` to link to plans
-
-## Adding Tests
-
-1. Add unit tests for new logic
-2. Add integration test if multiple components involved
-3. Mark tests with plan number if implementing a plan
-4. Run full suite before PR: `pytest tests/ -v`
+- There is no unit/integration/e2e directory split in this repo today.
+- The suite should be read by behavior area, not by artificial test tiers.
+- Shared-observability tests rely on the isolation fixture in `conftest.py`;
+  do not bypass it with ad hoc local state.

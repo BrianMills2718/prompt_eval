@@ -4,7 +4,7 @@ Observed problems, concerns, and technical debt. Items start as **unconfirmed**
 observations and get triaged through investigation into confirmed issues, plans,
 or dismissed.
 
-**Last reviewed:** (date)
+**Last reviewed:** 2026-03-18
 
 ---
 
@@ -39,6 +39,21 @@ or dismissed.
 ## Monitoring
 
 (Items confirmed as real but not yet urgent. Include trigger conditions.)
+
+### ISSUE-001: Inherited Plan Tooling Assumes Repo Scaffolding That Does Not Exist
+
+**Observed:** 2026-03-18
+**Status:** `monitoring`
+
+`prompt_eval` inherited plan-process scripts from a broader meta-process toolkit.
+Some of that tooling still assumes a doc-coupling validator and a formal
+`tests/e2e/` hierarchy that this repo does not currently maintain. The active
+docs surface now treats those scripts as secondary rather than canonical, but
+the mismatch still exists in the tooling itself.
+
+**Trigger to act:** if the repo starts relying on `complete_plan.py` or broader
+meta-process automation as a required workflow, localize or simplify that
+tooling first so it matches `prompt_eval`'s real structure.
 
 ---
 

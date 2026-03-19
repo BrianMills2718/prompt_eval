@@ -9,5 +9,6 @@ compatibility contracts in `prompt_eval`.
 Related architecture docs:
 
 - `../UNCERTAINTIES.md`
+- `../plans/01_master-roadmap.md`
 
 Status: active.
