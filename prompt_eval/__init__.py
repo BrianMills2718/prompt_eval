@@ -31,6 +31,7 @@ from prompt_eval.prompt_assets import build_prompt_variant_from_ref
 from prompt_eval.query import load_result_from_observability
 from prompt_eval.runner import run_experiment
 from prompt_eval.stats import compare_variants
+from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager
 from prompt_eval.store import (
     list_results,
     load_experiment,
@@ -60,6 +61,9 @@ __all__ = [
     "save_experiment",
     "load_experiment",
     "list_results",
+    # Golden Set
+    "GoldenSetManager",
+    "AlternativeRecord",
     # Evaluators
     "kappa_evaluator",
     "exact_match_evaluator",
