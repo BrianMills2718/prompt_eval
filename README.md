@@ -24,7 +24,8 @@ Implemented and verified:
 
 - experiment execution across `PromptVariant x ExperimentInput x replicate`
 - per-trial evaluators and corpus-level evaluators
-- statistical comparison via bootstrap confidence intervals or Welch's test
+- statistical comparison via SciPy-backed bootstrap confidence intervals or
+  Welch's test
 - optimization helpers for grid search, few-shot selection, and instruction
   search
 - internal judge and instruction-search prompts stored as local YAML/Jinja
@@ -40,6 +41,8 @@ Open boundary decisions:
   deprecated path once prompt assets are broadly adopted
 - whether `prompt_eval` stays strictly prompt-centric or grows into a broader
   non-prompt optimization package
+- whether future stronger statistical claims should introduce paired or
+  clustered comparison keyed by `input_id` instead of pooled trial comparison
 
 The model-governance direction itself is now decided: experiment-semantic
 choices such as the subject model should be declared explicitly rather than
@@ -50,6 +53,14 @@ itself under study. That contract is recorded in
 and implemented through the public experiment and optimization surfaces. The
 remaining prompt-policy drift is tracked separately in
 [docs/plans/06_prompts-as-data-cleanup.md](docs/plans/06_prompts-as-data-cleanup.md).
+
+The statistical-engine direction is also now explicit: `compare_variants()`
+uses off-the-shelf inference for its current lightweight IID-style comparison
+contract, but stronger external claims would still require a separate
+paired/clustered design decision. That boundary is recorded in
+[docs/adr/0005-statistical-inference-boundary.md](docs/adr/0005-statistical-inference-boundary.md)
+and the remaining design question is tracked in
+[docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md).
 
 Open boundary decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and

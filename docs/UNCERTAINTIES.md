@@ -90,3 +90,16 @@ under study.
 **Verified in:** `docs/adr/0003-explicit-experiment-semantics.md`,
 `docs/plans/05_model-governance-alignment.md`, `prompt_eval.experiment`,
 `prompt_eval.optimize`, and `prompt_eval.prompt_assets`
+
+### U7: Should Statistical Comparison Stay Pooled-IID Or Gain Paired/Clustered Modes?
+
+**Status:** ❓ Open
+**Raised:** 2026-03-19
+**Context:** `prompt_eval` trials are usually structured by
+`variant x input x replicate`. A simple pooled-trial comparison is useful for
+internal ranking, but stronger external claims may require paired or clustered
+comparison keyed by `input_id`.
+**Current assumption:** modernize the current `compare_variants()` engine with
+off-the-shelf inference for the existing lightweight API, but keep the
+paired/clustered design question explicit until there is a concrete need for a
+stronger comparison contract.

@@ -63,9 +63,10 @@ Defined in [prompt_eval/evaluators.py](../prompt_eval/evaluators.py).
 
 - `compare_variants(result, variant_a, variant_b, *, method="bootstrap", ...)`
 
-Compares two variants using either bootstrap confidence intervals or Welch's
-test. Corpus-level scores are not statistically compared because they are
-single aggregated values per variant.
+Compares two variants using SciPy-backed bootstrap confidence intervals or
+Welch's test over the current lightweight pooled-trial comparison contract.
+Corpus-level scores are not statistically compared because they are single
+aggregated values per variant.
 
 Defined in [prompt_eval/stats.py](../prompt_eval/stats.py).
 

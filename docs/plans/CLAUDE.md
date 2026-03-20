@@ -12,6 +12,7 @@ Canonical planning surface for `prompt_eval`.
 | 4 | [Documentation Surface Hardening](04_documentation-surface-hardening.md) | Medium | ✅ Complete | - |
 | 5 | [Explicit Experiment Semantics And Model Governance Alignment](05_model-governance-alignment.md) | High | ✅ Complete | - |
 | 6 | [Prompts As Data Cleanup](06_prompts-as-data-cleanup.md) | Medium | ✅ Complete | - |
+| 7 | [Statistical Engine Modernization](07_statistical-engine-modernization.md) | High | ✅ Complete | - |
 
 ## Status Key
 

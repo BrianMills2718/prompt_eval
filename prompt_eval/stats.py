@@ -5,6 +5,9 @@ from __future__ import annotations
 import statistics
 from dataclasses import dataclass
 
+import numpy as np
+from scipy import stats as scipy_stats
+
 from prompt_eval.experiment import EvalResult
 
 
@@ -103,19 +106,22 @@ def _bootstrap_compare(
     confidence: float,
     n_bootstrap: int = 10_000,
 ) -> ComparisonResult:
-    """Bootstrap confidence interval for the difference in means."""
-    import random
-
-    diffs = []
-    for _ in range(n_bootstrap):
-        sample_a = random.choices(scores_a, k=len(scores_a))
-        sample_b = random.choices(scores_b, k=len(scores_b))
-        diffs.append(statistics.mean(sample_a) - statistics.mean(sample_b))
-
-    diffs.sort()
-    alpha = 1 - confidence
-    ci_lower = diffs[int(n_bootstrap * alpha / 2)]
-    ci_upper = diffs[int(n_bootstrap * (1 - alpha / 2))]
+    """SciPy-backed bootstrap confidence interval for the difference in means."""
+    bootstrap_result = scipy_stats.bootstrap(
+        data=(
+            np.asarray(scores_a, dtype=float),
+            np.asarray(scores_b, dtype=float),
+        ),
+        statistic=_mean_difference_statistic,
+        confidence_level=confidence,
+        n_resamples=n_bootstrap,
+        method="percentile",
+        paired=False,
+        vectorized=False,
+        rng=np.random.default_rng(0),
+    )
+    ci_lower = float(bootstrap_result.confidence_interval.low)
+    ci_upper = float(bootstrap_result.confidence_interval.high)
 
     significant = not (ci_lower <= 0 <= ci_upper)
 
@@ -129,7 +135,7 @@ def _bootstrap_compare(
         ci_upper=ci_upper,
         significant=significant,
         method="bootstrap",
-        detail=f"Bootstrap CI ({confidence:.0%}): [{ci_lower:.4f}, {ci_upper:.4f}]",
+        detail=f"SciPy bootstrap CI ({confidence:.0%}): [{ci_lower:.4f}, {ci_upper:.4f}]",
     )
 
 
@@ -143,8 +149,7 @@ def _welch_compare(
     diff: float,
     confidence: float,
 ) -> ComparisonResult:
-    """Welch's t-test (no scipy dependency — uses normal approximation for large n)."""
-    import math
+    """SciPy-backed unequal-variance comparison with Welch-Satterthwaite CI."""
 
     n_a, n_b = len(scores_a), len(scores_b)
 
@@ -153,7 +158,7 @@ def _welch_compare(
 
     var_a = statistics.variance(scores_a)
     var_b = statistics.variance(scores_b)
-    se = math.sqrt(var_a / n_a + var_b / n_b)
+    se = float(np.sqrt(var_a / n_a + var_b / n_b))
 
     if se == 0:
         return ComparisonResult(
@@ -163,21 +168,23 @@ def _welch_compare(
             method="welch", detail="Zero variance in both groups",
         )
 
-    t_stat = diff / se
+    welch_result = scipy_stats.ttest_ind(
+        np.asarray(scores_a, dtype=float),
+        np.asarray(scores_b, dtype=float),
+        equal_var=False,
+    )
+    t_stat = float(welch_result.statistic)
+    p_value = float(welch_result.pvalue)
 
     # Welch-Satterthwaite degrees of freedom
     num = (var_a / n_a + var_b / n_b) ** 2
     denom = (var_a / n_a) ** 2 / (n_a - 1) + (var_b / n_b) ** 2 / (n_b - 1)
     df = num / denom if denom > 0 else 1
 
-    # For df > 30, use z-approximation; otherwise use conservative z=2.0
-    if df > 30:
-        z = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}.get(confidence, 1.96)
-    else:
-        z = 2.0  # conservative for small samples
-
-    ci_lower = diff - z * se
-    ci_upper = diff + z * se
+    alpha = 1 - confidence
+    t_crit = float(scipy_stats.t.ppf(1 - alpha / 2, df))
+    ci_lower = diff - t_crit * se
+    ci_upper = diff + t_crit * se
     significant = not (ci_lower <= 0 <= ci_upper)
 
     return ComparisonResult(
@@ -185,5 +192,14 @@ def _welch_compare(
         mean_a=mean_a, mean_b=mean_b, difference=diff,
         ci_lower=ci_lower, ci_upper=ci_upper, significant=significant,
         method="welch",
-        detail=f"Welch's t: t={t_stat:.3f}, df={df:.1f}, CI ({confidence:.0%}): [{ci_lower:.4f}, {ci_upper:.4f}]",
+        detail=(
+            f"SciPy Welch t={t_stat:.3f}, df={df:.1f}, p={p_value:.4g}, "
+            f"CI ({confidence:.0%}): [{ci_lower:.4f}, {ci_upper:.4f}]"
+        ),
     )
+
+
+def _mean_difference_statistic(sample_a: np.ndarray, sample_b: np.ndarray) -> float:
+    """Return the mean difference used by the bootstrap comparison."""
+
+    return float(np.mean(sample_a) - np.mean(sample_b))

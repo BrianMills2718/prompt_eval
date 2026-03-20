@@ -191,8 +191,23 @@ true:
 - no prompt examples are added without explicit review
 - focused tests prove the template-backed behavior remains intact
 
+#### Program F: Statistical Engine Modernization
+
+**Plan:** [07_statistical-engine-modernization.md](./07_statistical-engine-modernization.md)
+**Status:** Complete
+
+**Success criteria:**
+
+- inferential methods in the current `compare_variants()` API use an
+  off-the-shelf stats library rather than hand-rolled math
+- public docs stay honest that current comparison remains a lightweight
+  IID-style helper
+- the paired/clustered comparison question is tracked explicitly as a separate
+  design concern
+
 ### Current Default Next Step
 
 There is no further unblocked implementation slice in the current roadmap.
-Program B remains the only open program, and it is explicitly blocked on shared
-prompt-asset adoption evidence and the package-scope decision.
+Program B remains open but blocked on shared prompt-asset adoption evidence and
+the package-scope decision. The remaining statistical design question is
+tracked explicitly in `docs/UNCERTAINTIES.md`.

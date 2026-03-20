@@ -40,6 +40,7 @@ class TestBootstrapCompare:
         comp = compare_variants(result, "a", "b", method="bootstrap")
         assert comp.significant is False
         assert comp.difference == pytest.approx(0.0)
+        assert "SciPy bootstrap" in comp.detail
 
     def test_overlapping_distributions(self):
         result = _make_result(
@@ -62,7 +63,8 @@ class TestWelchCompare:
         comp = compare_variants(result, "a", "b", method="welch")
         assert comp.significant is True
         assert comp.method == "welch"
-        assert "t=" in comp.detail
+        assert "SciPy Welch" in comp.detail
+        assert "p=" in comp.detail
 
     def test_same_scores(self):
         result = _make_result([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])

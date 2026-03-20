@@ -55,23 +55,6 @@ the mismatch still exists in the tooling itself.
 meta-process automation as a required workflow, localize or simplify that
 tooling first so it matches `prompt_eval`'s real structure.
 
-### ISSUE-004: Statistical Engine Remains Hand-Rolled
-
-**Observed:** 2026-03-19
-**Status:** `monitoring`
-
-`prompt_eval.stats` currently uses local bootstrap and Welch-style comparison
-logic instead of an off-the-shelf statistics library. That is acceptable for
-lightweight internal comparison, but if the package needs externally defensible
-inference or stronger guarantees, the current implementation should be replaced
-with `scipy` or `statsmodels`.
-
-**Trigger to act:** if `prompt_eval` starts making stronger statistical claims,
-needs additional statistical methods, or becomes a higher-stakes decision
-surface beyond lightweight internal experimentation.
-
----
-
 ## Confirmed
 
 (Items that need a fix but don't have a plan yet.)
@@ -82,6 +65,7 @@ surface beyond lightweight internal experimentation.
 |----|-------------|------------|------|
 | ISSUE-002 | Model Governance Drift In Package Defaults | Public experiment and optimizer surfaces now require explicit subject-model declaration; judge helpers keep only documented internal convenience defaults. | 2026-03-19 |
 | ISSUE-003 | Internal LLM Prompts Are Still Embedded In Python | Judge and instruction-search helper prompts now live as local YAML/Jinja templates rendered via `llm_client`, rather than inline Python strings. | 2026-03-19 |
+| ISSUE-004 | Statistical Engine Remains Hand-Rolled | `prompt_eval.stats` now uses SciPy-backed Welch and bootstrap inference for the current lightweight comparison API; the remaining paired/clustered design question is tracked separately in `docs/UNCERTAINTIES.md`. | 2026-03-19 |
 
 ---
 
