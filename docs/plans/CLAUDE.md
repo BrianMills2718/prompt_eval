@@ -6,13 +6,14 @@ Canonical planning surface for `prompt_eval`.
 
 | # | Plan | Priority | Status | Blocks |
 |---|------|----------|--------|--------|
-| 1 | [Prompt Eval Master Roadmap](01_master-roadmap.md) | Highest | 🚧 In Progress | - |
+| 1 | [Prompt Eval Master Roadmap](01_master-roadmap.md) | Highest | ✅ Complete | - |
 | 2 | [Shared Observability Boundary](02_shared-observability-boundary.md) | Highest | ✅ Complete | - |
-| 3 | [Prompt Asset And Scope Boundary](03_prompt-asset-and-scope-boundary.md) | High | ⏸️ Blocked | ecosystem prompt-asset adoption and scope decision |
+| 3 | [Prompt Asset And Scope Boundary](03_prompt-asset-and-scope-boundary.md) | High | ✅ Complete | - |
 | 4 | [Documentation Surface Hardening](04_documentation-surface-hardening.md) | Medium | ✅ Complete | - |
 | 5 | [Explicit Experiment Semantics And Model Governance Alignment](05_model-governance-alignment.md) | High | ✅ Complete | - |
 | 6 | [Prompts As Data Cleanup](06_prompts-as-data-cleanup.md) | Medium | ✅ Complete | - |
 | 7 | [Statistical Engine Modernization](07_statistical-engine-modernization.md) | High | ✅ Complete | - |
+| 8 | [Paired-By-Input Comparison Mode](08_paired-by-input-comparison-mode.md) | High | ✅ Complete | - |
 
 ## Status Key
 
@@ -34,8 +35,7 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-There is no active unblocked implementation plan. Plan 03 remains blocked on
-shared prompt-asset adoption and package-scope decisions.
+There is no active unblocked implementation plan on the current roadmap.
 
 ## Trivial Changes
 

@@ -66,6 +66,8 @@ tooling first so it matches `prompt_eval`'s real structure.
 | ISSUE-002 | Model Governance Drift In Package Defaults | Public experiment and optimizer surfaces now require explicit subject-model declaration; judge helpers keep only documented internal convenience defaults. | 2026-03-19 |
 | ISSUE-003 | Internal LLM Prompts Are Still Embedded In Python | Judge and instruction-search helper prompts now live as local YAML/Jinja templates rendered via `llm_client`, rather than inline Python strings. | 2026-03-19 |
 | ISSUE-004 | Statistical Engine Remains Hand-Rolled | `prompt_eval.stats` now uses SciPy-backed Welch and bootstrap inference for the current lightweight comparison API; the remaining paired/clustered design question is tracked separately in `docs/UNCERTAINTIES.md`. | 2026-03-19 |
+| ISSUE-005 | Prompt Asset Policy And Package Scope Were Still Ambiguous | The long-term boundary is now explicit: prompt assets are preferred when available, inline messages remain a permanent supported input, and `prompt_eval` stays prompt-centric. | 2026-03-19 |
+| ISSUE-006 | Stronger Comparison Needed An Explicit Repeated-Measures Mode | `compare_variants()` now keeps pooled comparison as the default and also supports `comparison_mode=\"paired_by_input\"` for matched-input inference. | 2026-03-19 |
 
 ---
 

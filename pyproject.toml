@@ -45,3 +45,7 @@ follow_imports = "skip"
 [[tool.mypy.overrides]]
 module = ["fastmcp", "fastmcp.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*"]
+ignore_missing_imports = true

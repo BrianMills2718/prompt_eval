@@ -41,24 +41,29 @@ prompt-eval result family from the shared backend by `execution_id`.
 **Verified in:** code in `prompt_eval.runner`, `prompt_eval.query`, and tests
 covering shared-run emission plus read-side reconstruction
 
-### U3: Backward Compatibility for Inline Prompt Messages
+### U3: Backward Compatibility For Inline Prompt Messages
 
-**Status:** ❓ Open  
-**Raised:** 2026-03-17  
-**Context:** Current `PromptVariant` instances carry inline message lists, while
-the architecture direction prefers explicit prompt assets as data.  
-**Current assumption:** support inline messages as a compatibility input for now,
-but treat explicit prompt asset references as the preferred long-term model.
+**Status:** ✅ Resolved
+**Raised:** 2026-03-17
+**Resolved:** 2026-03-19
+**Resolution:** inline message lists remain a permanent supported input. Prompt
+assets are preferred when available, but inline `PromptVariant(messages=...)`
+is intentionally retained for ad hoc experiments, tests, and project-local
+prompts that are not yet shared assets.
+**Verified in:** `docs/adr/0006-prompt-asset-preference-and-scope-boundary.md`,
+`README.md`, `docs/API_REFERENCE.md`
 
-### U4: Scope Boundary for Non-Prompt Optimization
+### U4: Scope Boundary For Non-Prompt Optimization
 
-**Status:** ⏸️ Deferred  
-**Raised:** 2026-03-17  
-**Context:** Some runs will optimize code, retrieval, or workflow behavior
-instead of prompt text.  
-**Current assumption:** `prompt_eval` remains focused on prompt-centric
-evaluation and optimization. Other evaluators can share the same observability
-backend without forcing them into this package.
+**Status:** ✅ Resolved
+**Raised:** 2026-03-17
+**Resolved:** 2026-03-19
+**Resolution:** `prompt_eval` remains prompt-centric. It should not broaden
+into generic code, retrieval, or workflow optimization. Adjacent evaluators may
+share the same `llm_client` observability substrate without being pulled into
+this package.
+**Verified in:** `docs/adr/0006-prompt-asset-preference-and-scope-boundary.md`,
+`README.md`, `CLAUDE.md`
 
 ### U5: Corpus-Level Evaluator Representation
 
@@ -93,13 +98,14 @@ under study.
 
 ### U7: Should Statistical Comparison Stay Pooled-IID Or Gain Paired/Clustered Modes?
 
-**Status:** ❓ Open
+**Status:** ✅ Resolved
 **Raised:** 2026-03-19
-**Context:** `prompt_eval` trials are usually structured by
-`variant x input x replicate`. A simple pooled-trial comparison is useful for
-internal ranking, but stronger external claims may require paired or clustered
-comparison keyed by `input_id`.
-**Current assumption:** modernize the current `compare_variants()` engine with
-off-the-shelf inference for the existing lightweight API, but keep the
-paired/clustered design question explicit until there is a concrete need for a
-stronger comparison contract.
+**Resolved:** 2026-03-19
+**Resolution:** `compare_variants()` now keeps explicit pooled comparison as
+the default and also supports `comparison_mode="paired_by_input"` for stronger
+within-experiment comparison keyed by `input_id`. In paired mode, scored
+replicates are aggregated to per-input means and compared with off-the-shelf
+paired inference. More advanced hierarchical models remain out of scope unless
+a future program requires them.
+**Verified in:** `docs/adr/0007-paired-by-input-comparison-mode.md`,
+`docs/plans/08_paired-by-input-comparison-mode.md`, `prompt_eval.stats`

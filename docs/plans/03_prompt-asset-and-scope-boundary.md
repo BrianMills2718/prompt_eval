@@ -1,34 +1,29 @@
 # Plan 03: Prompt Asset And Scope Boundary
 
-**Status:** ⏸️ Blocked
+**Status:** ✅ Complete
 **Type:** design
 **Priority:** High
-**Blocked By:** ecosystem prompt-asset adoption evidence and package-scope decision
-**Blocks:** the next default implementation slice in `prompt_eval`
+**Blocked By:** None
+**Blocks:** boundary ambiguity around prompt assets and package scope
 
 ---
 
 ## Gap
 
-**Current:** `prompt_eval` can already run experiments from inline message lists
-and can also build `PromptVariant`s from explicit `prompt_ref`s. That means the
-mechanism exists, but the long-term contract is still undecided.
+**Current:** `prompt_eval` already supported both inline message lists and
+explicit prompt assets, but the repo had not locked the long-term policy for
+either prompt-definition style or package scope.
 
-Two questions remain open:
+**Target:** record and verify the long-term boundary:
 
-1. Are inline message lists a permanent supported input or a compatibility path
-   that should eventually be deprecated once prompt assets are broadly adopted?
-2. Does `prompt_eval` remain strictly prompt-centric, or should it expand into
-   broader non-prompt optimization for code, retrieval, or workflow behavior?
+- prompt assets are the preferred path when available,
+- inline messages remain a permanent supported input,
+- `prompt_eval` remains prompt-centric rather than broadening into generic
+  non-prompt optimization.
 
-**Target:** document and lock the long-term boundary:
-
-- explicit prompt assets are the preferred path when available,
-- inline message compatibility has an explicit policy,
-- non-prompt optimization has an explicit yes/no package boundary.
-
-**Why:** without those decisions, new work risks teaching the wrong preferred
-path or widening the package without a clear architectural mandate.
+**Why:** without those decisions, docs and future code would keep oscillating
+between fake deprecation pressure for inline prompts and accidental scope creep
+into adjacent tooling.
 
 ---
 
@@ -37,22 +32,21 @@ path or widening the package without a clear architectural mandate.
 - `README.md`
 - `docs/UNCERTAINTIES.md`
 - `docs/adr/0001-llm-client-substrate-boundary.md`
-- `prompt_eval/experiment.py`
+- `onto-canon6/src/onto_canon6/evaluation/prompt_eval_service.py`
+- `qualitative_coding/scripts/optimize_thematic_prompt.py`
 - `prompt_eval/prompt_assets.py`
-- `prompt_eval/runner.py`
-- `prompt_eval/optimize.py`
 
 ---
 
 ## Files Affected
 
 - `README.md`
-- `AGENTS.md`
+- `CLAUDE.md`
 - `docs/UNCERTAINTIES.md`
 - `docs/plans/01_master-roadmap.md`
-- `prompt_eval/experiment.py` (only if compatibility policy changes)
-- `prompt_eval/prompt_assets.py` (only if promotion/deprecation behavior changes)
-- downstream consumer docs/tests if inline-message policy changes
+- `docs/plans/CLAUDE.md`
+- `docs/adr/0006-prompt-asset-preference-and-scope-boundary.md`
+- `docs/API_REFERENCE.md`
 
 ---
 
@@ -60,48 +54,18 @@ path or widening the package without a clear architectural mandate.
 
 ### Steps
 
-1. Decide the compatibility policy for inline message lists:
-   - permanent supported input, or
-   - compatibility path with eventual deprecation conditions.
-2. Decide whether `prompt_eval` stays prompt-centric or broadens into
-   non-prompt optimization.
-3. Update docs, examples, and any deprecation or guidance surfaces to match the
-   chosen boundary.
-4. Only after the boundary is explicit, implement any behavior or warning
-   changes.
+1. Review real downstream consumers rather than deciding from abstraction alone.
+2. Lock the inline-message policy explicitly.
+3. Lock the package-scope decision explicitly.
+4. Update roadmap, uncertainty, and public docs so the chosen boundary becomes
+   canonical.
 
-### Unblock Conditions
+### Thin Slice Status
 
-This plan is unblocked only when both of the following happen:
-
-1. **Inline-message policy decision**
-   - maintainership explicitly decides that inline messages are either:
-     - indefinite supported input, or
-     - a compatibility path with stated deprecation conditions.
-2. **Package-scope decision**
-   - maintainership explicitly decides whether `prompt_eval` remains
-     prompt-centric or broadens into non-prompt optimization.
-
-### Decision Ritual
-
-This blocker resolves only through the canonical control surface:
-
-- ADR, or
-- roadmap + uncertainty update approved by the maintainer.
-
-Do not treat ad hoc code changes or one-off downstream usage as resolution by
-themselves.
-
-### Evidence To Gather
-
-Useful inputs before making the decision:
-
-- whether maintained downstream users are actually adopting `prompt_ref` as
-  their primary path,
-- whether inline-message experiments are still common enough to justify
-  indefinite first-class support,
-- whether there is a concrete non-prompt optimization consumer that should live
-  in this package rather than beside it.
+- [x] Phase 1: gather downstream evidence from maintained consumers
+- [x] Phase 2: record the prompt-asset preference and inline-message policy
+- [x] Phase 3: record the package-scope decision
+- [x] Phase 4: refresh roadmap, uncertainty, and public docs to match
 
 ---
 
@@ -109,34 +73,35 @@ Useful inputs before making the decision:
 
 ### New Tests (TDD)
 
-If the blocker is resolved and implementation begins:
-
 | Test File | Test Function | What It Verifies |
 |-----------|---------------|------------------|
 | `tests/test_prompt_assets.py` | `test_builds_variant_from_shared_prompt_asset` | Prompt-asset path remains first-class |
-| `tests/test_runner.py` | new or existing coverage depending on decision | Inline-message compatibility or deprecation behavior is explicit |
+| `tests/test_runner.py` | existing inline-variant coverage | Inline message variants remain a supported input rather than an accidental regression |
 
 ### Existing Tests (Must Pass)
 
 | Test Pattern | Why |
 |--------------|-----|
-| `pytest tests/test_prompt_assets.py tests/test_runner.py -q` | Prompt identity and runner behavior stay coherent |
-| `pytest tests/ -q` | No regression across execution, optimization, or storage |
+| `pytest tests/test_prompt_assets.py tests/test_runner.py -q` | Prompt identity and inline-message execution both remain supported |
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Inline-message compatibility policy is explicitly documented
-- [ ] Prompt-asset preference is explicitly documented and consistent
-- [ ] Package scope for non-prompt optimization is explicit
-- [ ] Any resulting behavior changes are verified by focused tests
+- [x] Inline-message compatibility policy is explicitly documented
+- [x] Prompt-asset preference is explicitly documented and consistent
+- [x] Package scope for non-prompt optimization is explicit
+- [x] The boundary is recorded through an ADR, roadmap update, and uncertainty resolution
 
 ---
 
 ## Notes
 
-This plan is blocked on product/ecosystem decisions, not missing mechanics.
-`prompt_eval` already supports both inline messages and explicit prompt assets.
-The missing piece is the long-term contract and the decision ritual that locks
-it.
+Resolved by ADR 0006.
+
+Decision summary:
+
+- Prompt assets are preferred when available.
+- Inline message lists remain a permanent supported input.
+- `prompt_eval` stays prompt-centric; broader non-prompt optimization belongs
+  outside this package.

@@ -35,14 +35,14 @@ Implemented and verified:
 - prompt asset compatibility via `build_prompt_variant_from_ref()`
 - optional MCP server for agent workflows
 
-Open boundary decisions:
+Resolved boundary decisions:
 
-- whether inline message lists remain indefinite compatibility input or become a
-  deprecated path once prompt assets are broadly adopted
-- whether `prompt_eval` stays strictly prompt-centric or grows into a broader
-  non-prompt optimization package
-- whether future stronger statistical claims should introduce paired or
-  clustered comparison keyed by `input_id` instead of pooled trial comparison
+- prompt assets are preferred when available, but inline message variants remain
+  a permanent supported input for ad hoc and project-local experiments
+- `prompt_eval` stays prompt-centric rather than broadening into generic code,
+  retrieval, or workflow optimization
+- `compare_variants()` now supports both explicit pooled comparison and an
+  explicit `paired_by_input` mode keyed by `input_id`
 
 The model-governance direction itself is now decided: experiment-semantic
 choices such as the subject model should be declared explicitly rather than
@@ -54,15 +54,17 @@ and implemented through the public experiment and optimization surfaces. The
 remaining prompt-policy drift is tracked separately in
 [docs/plans/06_prompts-as-data-cleanup.md](docs/plans/06_prompts-as-data-cleanup.md).
 
-The statistical-engine direction is also now explicit: `compare_variants()`
-uses off-the-shelf inference for its current lightweight IID-style comparison
-contract, but stronger external claims would still require a separate
-paired/clustered design decision. That boundary is recorded in
+The comparison boundary is also now explicit: `compare_variants()` keeps pooled
+comparison as a lightweight default and also supports
+`comparison_mode="paired_by_input"` when the same inputs are scored across
+variants. Those decisions are recorded in
 [docs/adr/0005-statistical-inference-boundary.md](docs/adr/0005-statistical-inference-boundary.md)
-and the remaining design question is tracked in
-[docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md).
+and
+[docs/adr/0007-paired-by-input-comparison-mode.md](docs/adr/0007-paired-by-input-comparison-mode.md).
 
-Open boundary decisions remain tracked in
+The active roadmap is now complete; future work should start from new evidence
+or a new product goal rather than from leftover architecture ambiguity. Current
+architecture decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
 [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
 
@@ -121,7 +123,12 @@ result = asyncio.run(
     )
 )
 
-comparison = compare_variants(result, "concise", "bullet")
+comparison = compare_variants(
+    result,
+    "concise",
+    "bullet",
+    comparison_mode="paired_by_input",
+)
 reloaded = load_result_from_observability(
     result.execution_id,
     project="prompt_eval_examples",
@@ -137,6 +144,8 @@ Notes:
   explicit caller decision, but raw model overrides are also valid when model
   comparison is itself the point of the experiment.
 - Inline message lists still work for compatibility or one-off experiments.
+- Use `comparison_mode="paired_by_input"` when the same `input_id`s are scored
+  across variants and you want the matched-input comparison.
 - `kwargs["task"]` and `kwargs["max_budget"]` override the default
   `prompt_eval.run` call metadata and flow through to `llm_client`.
 

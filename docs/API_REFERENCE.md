@@ -61,12 +61,13 @@ Defined in [prompt_eval/evaluators.py](../prompt_eval/evaluators.py).
 
 ## Statistics
 
-- `compare_variants(result, variant_a, variant_b, *, method="bootstrap", ...)`
+- `compare_variants(result, variant_a, variant_b, *, method="bootstrap", comparison_mode="pooled", ...)`
 
 Compares two variants using SciPy-backed bootstrap confidence intervals or
-Welch's test over the current lightweight pooled-trial comparison contract.
-Corpus-level scores are not statistically compared because they are single
-aggregated values per variant.
+Welch's test over the current pooled-trial comparison contract, or using a
+matched `input_id` comparison through `comparison_mode="paired_by_input"` with
+paired bootstrap or paired t-test. Corpus-level scores are not statistically
+compared because they are single aggregated values per variant.
 
 Defined in [prompt_eval/stats.py](../prompt_eval/stats.py).
 
@@ -92,8 +93,9 @@ Defined in [prompt_eval/optimize.py](../prompt_eval/optimize.py).
 - `build_prompt_variant_from_ref(name, prompt_ref, *, model, render_context=None, ...)`
 
 Turns an explicit shared `prompt_ref` into a normal `PromptVariant` while
-preserving prompt identity in observability provenance. The preferred usage is
-to pass the subject model explicitly.
+preserving prompt identity in observability provenance. Prompt assets are the
+preferred path when they already exist, but inline message variants remain a
+supported input elsewhere in the package.
 
 Defined in [prompt_eval/prompt_assets.py](../prompt_eval/prompt_assets.py).
 

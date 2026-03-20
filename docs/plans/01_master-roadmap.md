@@ -1,6 +1,6 @@
 # Plan 01: Prompt Eval Master Roadmap
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Type:** program
 **Priority:** Highest
 **Blocked By:** None
@@ -59,11 +59,10 @@ with no durable source of truth.
 
 1. Keep the shared observability boundary documented as complete once its
    acceptance criteria remain true.
-2. Keep the prompt-asset and scope boundary explicit as the one open program.
-3. Keep documentation cleanup recorded as a completed program instead of
+2. Keep documentation cleanup recorded as a completed program instead of
    rediscovering the same drift repeatedly.
-4. Update the roadmap only when a new real program appears or an existing
-   blocker is resolved.
+3. Update the roadmap only when a new real program appears or a completed
+   program needs to be superseded.
 
 ### Canonical Execution Rule
 
@@ -140,13 +139,14 @@ true:
 #### Program B: Prompt Asset And Scope Boundary
 
 **Plan:** [03_prompt-asset-and-scope-boundary.md](./03_prompt-asset-and-scope-boundary.md)  
-**Status:** Blocked
+**Status:** Complete
 
 **Success criteria:**
 
 - explicit prompt assets are the preferred documented path
-- inline message compatibility policy is decided and documented
-- the package scope boundary for non-prompt optimization is explicit
+- inline message compatibility policy is intentionally retained and documented
+- the package scope boundary for non-prompt optimization is explicit and
+  prompt-centric
 
 #### Program C: Documentation Surface Hardening
 
@@ -205,9 +205,21 @@ true:
 - the paired/clustered comparison question is tracked explicitly as a separate
   design concern
 
+#### Program G: Explicit Paired-By-Input Comparison Mode
+
+**Plan:** [08_paired-by-input-comparison-mode.md](./08_paired-by-input-comparison-mode.md)
+**Status:** Complete
+
+**Success criteria:**
+
+- `compare_variants()` supports an explicit paired-by-input mode keyed by
+  `input_id`
+- pooled comparison remains available and backward compatible
+- paired mode uses off-the-shelf paired inference over matched per-input means
+- paired mode fails loudly when the repeated-measures contract is not met
+
 ### Current Default Next Step
 
-There is no further unblocked implementation slice in the current roadmap.
-Program B remains open but blocked on shared prompt-asset adoption evidence and
-the package-scope decision. The remaining statistical design question is
-tracked explicitly in `docs/UNCERTAINTIES.md`.
+There is no active unblocked program on the current roadmap. Future work now
+needs new evidence, a new product goal, or a newly discovered defect rather
+than another pending cleanup slice from the current architecture program.

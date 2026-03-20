@@ -21,7 +21,7 @@ from prompt_eval.evaluators import (
 )
 from prompt_eval.experiment import Experiment
 from prompt_eval.runner import run_experiment as _run_experiment
-from prompt_eval.stats import compare_variants
+from prompt_eval.stats import ComparisonMethod, ComparisonMode, compare_variants
 from prompt_eval.store import list_results, load_result, save_result
 
 logger = logging.getLogger(__name__)
@@ -115,10 +115,21 @@ async def _compare_impl(
     variant_a: str,
     variant_b: str,
     method: str = "bootstrap",
+    comparison_mode: str = "pooled",
 ) -> dict:
     """Compare two variants from a saved result."""
     result = load_result(Path(path))
-    comparison = compare_variants(result, variant_a, variant_b, method=method)
+    validated_method, validated_mode = _validate_comparison_request(
+        method=method,
+        comparison_mode=comparison_mode,
+    )
+    comparison = compare_variants(
+        result,
+        variant_a,
+        variant_b,
+        method=validated_method,
+        comparison_mode=validated_mode,
+    )
     return {
         "variant_a": comparison.variant_a,
         "variant_b": comparison.variant_b,
@@ -129,8 +140,45 @@ async def _compare_impl(
         "ci_upper": comparison.ci_upper,
         "significant": comparison.significant,
         "method": comparison.method,
+        "comparison_mode": comparison.comparison_mode,
+        "n_units": comparison.n_units,
         "detail": comparison.detail,
     }
+
+
+def _validate_comparison_request(
+    *,
+    method: str,
+    comparison_mode: str,
+) -> tuple[ComparisonMethod, ComparisonMode]:
+    """Validate public MCP comparison inputs against the explicit stats contract."""
+
+    if comparison_mode == "pooled":
+        validated_mode: ComparisonMode = "pooled"
+        if method == "bootstrap":
+            return "bootstrap", validated_mode
+        if method == "welch":
+            return "welch", validated_mode
+        raise ValueError(
+            "pooled comparison supports only 'bootstrap' or 'welch'. "
+            f"Got {method!r}."
+        )
+
+    if comparison_mode == "paired_by_input":
+        validated_mode = "paired_by_input"
+        if method == "bootstrap":
+            return "bootstrap", validated_mode
+        if method == "paired_t":
+            return "paired_t", validated_mode
+        raise ValueError(
+            "paired_by_input comparison supports only 'bootstrap' or "
+            f"'paired_t'. Got {method!r}."
+        )
+
+    raise ValueError(
+        "Unknown comparison_mode. Use 'pooled' or 'paired_by_input'. "
+        f"Got {comparison_mode!r}."
+    )
 
 
 async def _evaluate_output_impl(
@@ -204,6 +252,7 @@ async def compare(
     variant_a: str,
     variant_b: str,
     method: str = "bootstrap",
+    comparison_mode: str = "pooled",
 ) -> dict:
     """Compare two variants from a saved result.
 
@@ -211,9 +260,11 @@ async def compare(
         path: Path to a saved result file.
         variant_a: Name of first variant.
         variant_b: Name of second variant.
-        method: "bootstrap" (default) or "welch".
+        method: pooled mode supports `"bootstrap"` (default) or `"welch"`;
+            paired-by-input mode supports `"bootstrap"` or `"paired_t"`.
+        comparison_mode: `"pooled"` (default) or `"paired_by_input"`.
     """
-    return await _compare_impl(path, variant_a, variant_b, method)
+    return await _compare_impl(path, variant_a, variant_b, method, comparison_mode)
 
 
 @mcp.tool

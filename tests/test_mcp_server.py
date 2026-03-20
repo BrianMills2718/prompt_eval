@@ -230,3 +230,30 @@ class TestCompare:
         assert result["variant_b"] == "b"
         assert "significant" in result
         assert "difference" in result
+
+    async def test_compare_variants_paired_by_input(self, tmp_path: Path) -> None:
+        result = EvalResult(
+            experiment_name="paired",
+            variants=["a", "b"],
+            trials=[
+                Trial(variant_name="a", input_id="i1", replicate=0, output="x", score=0.9),
+                Trial(variant_name="a", input_id="i1", replicate=1, output="x", score=0.8),
+                Trial(variant_name="a", input_id="i2", replicate=0, output="x", score=0.85),
+                Trial(variant_name="a", input_id="i2", replicate=1, output="x", score=0.83),
+                Trial(variant_name="b", input_id="i1", replicate=0, output="x", score=0.5),
+                Trial(variant_name="b", input_id="i1", replicate=1, output="x", score=0.52),
+                Trial(variant_name="b", input_id="i2", replicate=0, output="x", score=0.48),
+                Trial(variant_name="b", input_id="i2", replicate=1, output="x", score=0.47),
+            ],
+        )
+        path = save_result(result, path=tmp_path / "paired.json")
+        payload = await _compare_impl(
+            str(path),
+            "a",
+            "b",
+            method="paired_t",
+            comparison_mode="paired_by_input",
+        )
+        assert payload["comparison_mode"] == "paired_by_input"
+        assert payload["method"] == "paired_t"
+        assert payload["n_units"] == 2
