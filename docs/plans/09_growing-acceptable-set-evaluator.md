@@ -1,6 +1,6 @@
 # Plan 09: Growing Acceptable Set Evaluator
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete
 **Type:** implementation
 **Priority:** High
 **Blocked By:** None
@@ -10,11 +10,10 @@
 
 ## Gap
 
-**Current:** there is a local prototype for a persistent acceptable-alternatives
-cache, but it is not yet part of the canonical `prompt_eval` program. The
-prototype is synchronous, uses an ad hoc judge `dict`, and is not yet proven
-through the real async `run_experiment()` evaluator path. Downstream planning
-in `onto-canon6` already assumes this feature exists.
+**Current:** the acceptable-set evaluator now has the full intended thin-slice
+surface: async-capable evaluator wrapper, typed judge-decision validation,
+fail-loud cache semantics, runner integration, intentional package export, and
+public docs.
 
 **Target:** promote the pattern into a real `prompt_eval` feature:
 
@@ -22,7 +21,8 @@ in `onto-canon6` already assumes this feature exists.
 2. a typed judge-decision contract,
 3. local SQLite persistence with explicit dataset/dimension scoping,
 4. manual inspection/override support,
-5. focused tests proving both the cache behavior and runner integration.
+5. focused tests proving both the cache behavior and runner integration,
+6. an intentional public export and docs surface.
 
 **Why:** this is real prompt-centric evaluation infrastructure, not a side
 experiment. Without formalization, downstream repos are planning against an API
@@ -75,10 +75,10 @@ that is still local prototype code.
 
 ### Thin Slice Status
 
-- [ ] Phase 1: align the prototype surface with the ADR contract
-- [ ] Phase 2: add typed judge-decision validation and fail-loud behavior
-- [ ] Phase 3: prove async integration through `run_experiment()`
-- [ ] Phase 4: finalize public export and docs
+- [x] Phase 1: align the prototype surface with the ADR contract
+- [x] Phase 2: add typed judge-decision validation and fail-loud behavior
+- [x] Phase 3: prove async integration through `run_experiment()`
+- [x] Phase 4: finalize public export and docs
 
 ---
 
@@ -105,11 +105,11 @@ that is still local prototype code.
 
 ## Acceptance Criteria
 
-- [ ] The acceptable-set helper matches `prompt_eval`'s async evaluator model
-- [ ] Judge decisions are validated through a typed contract rather than ad hoc dict access
-- [ ] Cache semantics are explicit and fail loudly on malformed input or missing records
-- [ ] The feature is proven through direct tests and real runner integration
-- [ ] Public docs describe the local SQLite sidecar honestly as evaluator aid, not authoritative experiment record
+- [x] The acceptable-set helper matches `prompt_eval`'s async evaluator model
+- [x] Judge decisions are validated through a typed contract rather than ad hoc dict access
+- [x] Cache semantics are explicit and fail loudly on malformed input or missing records
+- [x] The feature is proven through direct tests and real runner integration
+- [x] Public docs describe the local SQLite sidecar honestly as evaluator aid, not authoritative experiment record
 
 ---
 
@@ -124,3 +124,14 @@ Implementation should stay narrow:
 
 The current local prototype is useful evidence, but it should not be treated as
 the final public contract without this plan being completed.
+
+Verified thin slice:
+
+- `GoldenSetManager` now exposes `aevaluate()` and `build_evaluator()` for the
+  real async evaluator path.
+- `JudgeDecision` provides typed fail-loud validation for fallback-judge
+  results.
+- Focused tests cover malformed judge payloads, async judge support, missing
+  override records, and runner integration.
+- `prompt_eval.__init__`, `README.md`, and `docs/API_REFERENCE.md` now expose
+  and document the acceptable-set helper intentionally.

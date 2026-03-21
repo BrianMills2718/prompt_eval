@@ -1,4 +1,11 @@
-"""prompt_eval — A/B prompt testing and evaluation."""
+"""Public package surface for prompt-centric experiment execution and analysis.
+
+This module exposes the stable concepts a caller needs to define experiments,
+run prompt variants, score outputs, compare variants, and use optional helpers
+such as acceptable-set evaluation. It intentionally re-exports the compact
+public surface rather than requiring callers to know the internal module
+layout.
+"""
 
 from prompt_eval.evaluators import (
     EvalScore,
@@ -31,7 +38,7 @@ from prompt_eval.prompt_assets import build_prompt_variant_from_ref
 from prompt_eval.query import load_result_from_observability
 from prompt_eval.runner import run_experiment
 from prompt_eval.stats import compare_variants
-from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager
+from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager, JudgeDecision
 from prompt_eval.store import (
     list_results,
     load_experiment,
@@ -64,6 +71,7 @@ __all__ = [
     # Golden Set
     "GoldenSetManager",
     "AlternativeRecord",
+    "JudgeDecision",
     # Evaluators
     "kappa_evaluator",
     "exact_match_evaluator",

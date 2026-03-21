@@ -52,12 +52,27 @@ Defined in:
 - `llm_judge_dimensional_evaluator(...)`
 - `EvalScore`
 - `RubricDimension`
+- `GoldenSetManager`
+- `JudgeDecision`
 
 These functions build per-trial evaluator callables. The LLM judge variants use
 `llm_client`, render their internal prompts from local YAML templates, and fail
 loudly when no judge produces a valid score.
 
+`GoldenSetManager` is the acceptable-set helper for string-like
+multi-correct-answer scenarios. It provides:
+
+- `aevaluate(output, expected, *, experiment_context="")`
+- `build_evaluator(*, experiment_context="")`
+- `get_alternatives(reference)`
+- `override(reference, alternative, status)`
+
+It keeps a local SQLite cache of accepted/rejected alternatives and validates
+fallback judge decisions through the typed `JudgeDecision` model. This cache is
+an evaluator aid, not the authoritative experiment record.
+
 Defined in [prompt_eval/evaluators.py](../prompt_eval/evaluators.py).
+The acceptable-set helper is defined in [prompt_eval/golden_set.py](../prompt_eval/golden_set.py).
 
 ## Statistics
 

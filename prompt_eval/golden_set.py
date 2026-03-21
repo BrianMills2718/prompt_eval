@@ -10,12 +10,16 @@ Implements ADR-0004: growing acceptable set evaluator.
 
 from __future__ import annotations
 
+import inspect
 import logging
 import sqlite3
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Literal, TypeAlias
+
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from prompt_eval.evaluators import EvalScore
 
@@ -23,6 +27,16 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_DB_DIR = Path.home() / ".prompt_eval"
 _DEFAULT_DB_NAME = "golden_sets.db"
+AlternativeStatus: TypeAlias = Literal["accepted", "rejected"]
+PrimaryEvaluatorResult: TypeAlias = float | EvalScore
+PrimaryEvaluator: TypeAlias = Callable[
+    [str, str | None],
+    PrimaryEvaluatorResult | Awaitable[PrimaryEvaluatorResult],
+]
+JudgeEvaluator: TypeAlias = Callable[
+    [str, str | None],
+    "JudgeDecision | Mapping[str, object] | Awaitable[JudgeDecision | Mapping[str, object]]",
+]
 
 
 @dataclass(frozen=True)
@@ -40,6 +54,21 @@ class AlternativeRecord:
     experiment_context: str
 
 
+class JudgeDecision(BaseModel):
+    """Typed result of reviewing one alternative against one reference.
+
+    The acceptable-set cache only stores explicit accept/reject decisions. The
+    decision must include the judge model and a short reasoning string so the
+    stored record remains auditable.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    reasonable: bool
+    reasoning: str
+    judge_model: str
+
+
 class GoldenSetManager:
     """Wraps an evaluator with a growing acceptable-alternatives store.
 
@@ -52,8 +81,8 @@ class GoldenSetManager:
     def __init__(
         self,
         *,
-        primary_evaluator: Callable[..., Any],
-        fallback_judge: Callable[..., Any],
+        primary_evaluator: PrimaryEvaluator,
+        fallback_judge: JudgeEvaluator,
         db_path: Path | None = None,
         dataset: str = "default",
         dimension: str = "default",
@@ -99,20 +128,47 @@ class GoldenSetManager:
     def evaluate(
         self,
         output: str,
-        expected: str,
+        expected: str | None,
         *,
         experiment_context: str = "",
     ) -> EvalScore:
-        """Score *output* against *expected* with cache-before-judge logic."""
+        """Score *output* against *expected* with cache-before-judge logic.
+
+        This synchronous entrypoint is intentionally narrow. It supports normal
+        synchronous primary evaluators and synchronous judges. If either
+        callable is asynchronous, use `aevaluate()` or `build_evaluator()`
+        instead so the async contract remains explicit.
+        """
+        reference = _require_string_expected(expected)
+        candidate = _require_string_output(output)
         primary_result = self._primary(output, expected)
+        if inspect.isawaitable(primary_result):
+            raise TypeError(
+                "GoldenSetManager.evaluate() does not support async primary "
+                "evaluators. Use aevaluate() or build_evaluator() instead."
+            )
         primary_score = _extract_score(primary_result)
         if primary_score >= self._threshold:
             self._hits += 1
+            logger.debug(
+                "acceptable-set primary hit",
+                extra={"dataset": self._dataset, "dimension": self._dimension},
+            )
             return _to_eval_score(primary_result, source="primary")
 
-        cached = self._lookup(expected, output)
+        cached = self._lookup(reference, candidate)
         if cached is not None:
             self._cache_hits += 1
+            logger.debug(
+                "acceptable-set cache hit",
+                extra={
+                    "dataset": self._dataset,
+                    "dimension": self._dimension,
+                    "reference_value": reference,
+                    "alternative_value": candidate,
+                    "status": cached.status,
+                },
+            )
             if cached.status == "accepted":
                 return EvalScore(
                     score=self._threshold,
@@ -122,29 +178,147 @@ class GoldenSetManager:
 
         self._cache_misses += 1
         judge_result = self._judge(output, expected)
-        if not isinstance(judge_result, dict):
+        if inspect.isawaitable(judge_result):
             raise TypeError(
-                f"Fallback judge must return a dict, got {type(judge_result).__name__}"
+                "GoldenSetManager.evaluate() does not support async judges. "
+                "Use aevaluate() or build_evaluator() instead."
             )
-        reasonable = judge_result.get("reasonable", False)
-        reasoning = judge_result.get("reasoning", "")
-        judge_model = judge_result.get("judge_model", "unknown")
-
-        status = "accepted" if reasonable else "rejected"
-        self._persist(
-            reference=expected,
-            alternative=output,
-            status=status,
-            reasoning=reasoning,
-            judge_model=judge_model,
+        decision = _coerce_judge_decision(judge_result)
+        return self._record_judge_decision(
+            reference=reference,
+            alternative=candidate,
+            decision=decision,
             experiment_context=experiment_context,
         )
 
-        if reasonable:
+    async def aevaluate(
+        self,
+        output: str,
+        expected: str | None,
+        *,
+        experiment_context: str = "",
+    ) -> EvalScore:
+        """Async-compatible acceptable-set evaluation entrypoint.
+
+        This is the primary integration path for `prompt_eval.run_experiment()`
+        because it supports both synchronous and asynchronous primary
+        evaluators and judge callables.
+        """
+        reference = _require_string_expected(expected)
+        candidate = _require_string_output(output)
+        primary_result = self._primary(output, expected)
+        if inspect.isawaitable(primary_result):
+            primary_result = await primary_result
+        primary_score = _extract_score(primary_result)
+        if primary_score >= self._threshold:
+            self._hits += 1
+            logger.debug(
+                "acceptable-set primary hit",
+                extra={"dataset": self._dataset, "dimension": self._dimension},
+            )
+            return _to_eval_score(primary_result, source="primary")
+
+        cached = self._lookup(reference, candidate)
+        if cached is not None:
+            self._cache_hits += 1
+            logger.debug(
+                "acceptable-set cache hit",
+                extra={
+                    "dataset": self._dataset,
+                    "dimension": self._dimension,
+                    "reference_value": reference,
+                    "alternative_value": candidate,
+                    "status": cached.status,
+                },
+            )
+            if cached.status == "accepted":
+                return EvalScore(
+                    score=self._threshold,
+                    reasoning=f"Cached accepted alternative: {cached.judge_reasoning}",
+                )
+            return EvalScore(score=0.0, reasoning=f"Cached rejected: {cached.judge_reasoning}")
+
+        self._cache_misses += 1
+        judge_result = self._judge(output, expected)
+        if inspect.isawaitable(judge_result):
+            judge_result = await judge_result
+        decision = _coerce_judge_decision(judge_result)
+        return self._record_judge_decision(
+            reference=reference,
+            alternative=candidate,
+            decision=decision,
+            experiment_context=experiment_context,
+        )
+
+    def build_evaluator(
+        self,
+        *,
+        experiment_context: str = "",
+    ) -> Callable[[str, str | None], Awaitable[EvalScore]]:
+        """Build an async evaluator suitable for `prompt_eval.run_experiment()`.
+
+        The returned async callable closes over this manager instance and keeps a
+        fixed `experiment_context` for persisted acceptable-set decisions.
+        """
+
+        async def evaluate(output: str, expected: str | None) -> EvalScore:
+            """Evaluate one candidate/reference pair through the acceptable-set cache."""
+
+            return await self.aevaluate(
+                output,
+                expected,
+                experiment_context=experiment_context,
+            )
+
+        return evaluate
+
+    def _record_judge_decision(
+        self,
+        *,
+        reference: str,
+        alternative: str,
+        decision: JudgeDecision,
+        experiment_context: str,
+    ) -> EvalScore:
+        """Persist one validated judge decision and return the evaluation result."""
+        status: AlternativeStatus = "accepted" if decision.reasonable else "rejected"
+        self._persist(
+            reference=reference,
+            alternative=alternative,
+            status=status,
+            reasoning=decision.reasoning,
+            judge_model=decision.judge_model,
+            experiment_context=experiment_context,
+        )
+
+        if decision.reasonable:
             self._judge_accepted += 1
-            return EvalScore(score=self._threshold, reasoning=f"Judge accepted: {reasoning}")
+            logger.info(
+                "acceptable-set judge accepted alternative",
+                extra={
+                    "dataset": self._dataset,
+                    "dimension": self._dimension,
+                    "reference_value": reference,
+                    "alternative_value": alternative,
+                    "judge_model": decision.judge_model,
+                },
+            )
+            return EvalScore(
+                score=self._threshold,
+                reasoning=f"Judge accepted: {decision.reasoning}",
+            )
         self._judge_rejected += 1
-        return EvalScore(score=0.0, reasoning=f"Judge rejected: {reasoning}")
+        logger.info(
+            "acceptable-set judge rejected alternative",
+            extra={
+                "dataset": self._dataset,
+                "dimension": self._dimension,
+                "reference_value": reference,
+                "alternative_value": alternative,
+                "judge_model": decision.judge_model,
+            },
+        )
+        return EvalScore(score=0.0, reasoning=f"Judge rejected: {decision.reasoning}")
 
     def get_alternatives(self, reference: str) -> list[AlternativeRecord]:
         """Return all stored alternatives for a reference value."""
@@ -156,17 +330,33 @@ class GoldenSetManager:
         )
         return [_row_to_record(row) for row in cursor.fetchall()]
 
-    def override(self, reference: str, alternative: str, status: str) -> None:
+    def override(self, reference: str, alternative: str, status: AlternativeStatus) -> None:
         """Manually override a stored judge decision."""
         if status not in ("accepted", "rejected"):
             msg = f"status must be 'accepted' or 'rejected', got '{status}'"
             raise ValueError(msg)
-        self._conn.execute(
+        cursor = self._conn.execute(
             """UPDATE acceptable_alternatives SET status = ?
                WHERE dataset = ? AND dimension = ? AND reference_value = ? AND alternative_value = ?""",
             (status, self._dataset, self._dimension, reference, alternative),
         )
+        if cursor.rowcount == 0:
+            raise KeyError(
+                "No acceptable-set record exists for "
+                f"reference={reference!r}, alternative={alternative!r}, "
+                f"dataset={self._dataset!r}, dimension={self._dimension!r}."
+            )
         self._conn.commit()
+        logger.info(
+            "acceptable-set override applied",
+            extra={
+                "dataset": self._dataset,
+                "dimension": self._dimension,
+                "reference_value": reference,
+                "alternative_value": alternative,
+                "status": status,
+            },
+        )
 
     def stats(self) -> dict[str, int]:
         """Return cache hit/miss/accepted/rejected counts for this session."""
@@ -193,7 +383,7 @@ class GoldenSetManager:
         *,
         reference: str,
         alternative: str,
-        status: str,
+        status: AlternativeStatus,
         reasoning: str,
         judge_model: str,
         experiment_context: str,
@@ -209,6 +399,17 @@ class GoldenSetManager:
              status, reasoning, judge_model, now, experiment_context),
         )
         self._conn.commit()
+        logger.info(
+            "acceptable-set decision persisted",
+            extra={
+                "dataset": self._dataset,
+                "dimension": self._dimension,
+                "reference_value": reference,
+                "alternative_value": alternative,
+                "status": status,
+                "judge_model": judge_model,
+            },
+        )
 
     def close(self) -> None:
         """Close the database connection."""
@@ -245,6 +446,42 @@ def _extract_score(result: Any) -> float:
     if isinstance(result, (int, float)):
         return float(result)
     return 0.0
+
+
+def _coerce_judge_decision(raw_decision: JudgeDecision | Mapping[str, object]) -> JudgeDecision:
+    """Validate and normalize one fallback-judge decision."""
+    if isinstance(raw_decision, JudgeDecision):
+        return raw_decision
+    try:
+        return JudgeDecision.model_validate(raw_decision)
+    except ValidationError as exc:
+        raise ValueError(
+            "Fallback judge returned an invalid JudgeDecision payload."
+        ) from exc
+
+
+def _require_string_output(output: str) -> str:
+    """Validate the v1 acceptable-set candidate contract."""
+    if not isinstance(output, str):
+        raise TypeError(
+            "Growing acceptable-set evaluation currently supports only string "
+            f"outputs, got {type(output).__name__}."
+        )
+    return output
+
+
+def _require_string_expected(expected: str | None) -> str:
+    """Validate the v1 acceptable-set reference contract."""
+    if expected is None:
+        raise ValueError(
+            "Growing acceptable-set evaluation requires a non-null expected reference."
+        )
+    if not isinstance(expected, str):
+        raise TypeError(
+            "Growing acceptable-set evaluation currently supports only string "
+            f"expected references, got {type(expected).__name__}."
+        )
+    return expected
 
 
 def _to_eval_score(result: Any, *, source: str) -> EvalScore:

@@ -61,8 +61,10 @@ with no durable source of truth.
    acceptance criteria remain true.
 2. Keep documentation cleanup recorded as a completed program instead of
    rediscovering the same drift repeatedly.
-3. Update the roadmap only when a new real program appears or a completed
-   program needs to be superseded.
+3. Promote new evidence-backed programs into explicit child plans rather than
+   leaving local prototype work orphaned.
+4. Update the roadmap when a new real program appears or a completed program
+   needs to be superseded.
 
 ### Canonical Execution Rule
 
@@ -217,6 +219,19 @@ true:
 - pooled comparison remains available and backward compatible
 - paired mode uses off-the-shelf paired inference over matched per-input means
 - paired mode fails loudly when the repeated-measures contract is not met
+
+#### Program H: Growing Acceptable Set Evaluator
+
+**Plan:** [09_growing-acceptable-set-evaluator.md](./09_growing-acceptable-set-evaluator.md)
+**Status:** Complete
+
+**Success criteria:**
+
+- the acceptable-set helper matches `prompt_eval`'s async evaluator contract
+- judge decisions use a typed fail-loud contract
+- cache semantics and override semantics are explicit
+- the feature is proven through direct tests and real runner integration
+- docs describe the local SQLite sidecar honestly
 
 ### Current Default Next Step
 

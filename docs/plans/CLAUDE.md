@@ -6,7 +6,7 @@ Canonical planning surface for `prompt_eval`.
 
 | # | Plan | Priority | Status | Blocks |
 |---|------|----------|--------|--------|
-| 1 | [Prompt Eval Master Roadmap](01_master-roadmap.md) | Highest | 🚧 In Progress | - |
+| 1 | [Prompt Eval Master Roadmap](01_master-roadmap.md) | Highest | ✅ Complete | - |
 | 2 | [Shared Observability Boundary](02_shared-observability-boundary.md) | Highest | ✅ Complete | - |
 | 3 | [Prompt Asset And Scope Boundary](03_prompt-asset-and-scope-boundary.md) | High | ✅ Complete | - |
 | 4 | [Documentation Surface Hardening](04_documentation-surface-hardening.md) | Medium | ✅ Complete | - |
@@ -14,7 +14,7 @@ Canonical planning surface for `prompt_eval`.
 | 6 | [Prompts As Data Cleanup](06_prompts-as-data-cleanup.md) | Medium | ✅ Complete | - |
 | 7 | [Statistical Engine Modernization](07_statistical-engine-modernization.md) | High | ✅ Complete | - |
 | 8 | [Paired-By-Input Comparison Mode](08_paired-by-input-comparison-mode.md) | High | ✅ Complete | - |
-| 9 | [Growing Acceptable Set Evaluator](09_growing-acceptable-set-evaluator.md) | High | 📋 Planned | - |
+| 9 | [Growing Acceptable Set Evaluator](09_growing-acceptable-set-evaluator.md) | High | ✅ Complete | - |
 
 ## Status Key
 
@@ -36,8 +36,7 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-Plan 09 is the current default next step: formalize the acceptable-set
-prototype into a real async `prompt_eval` evaluator feature.
+There is no active unblocked implementation plan on the current roadmap.
 
 ## Trivial Changes
 

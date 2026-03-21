@@ -33,6 +33,8 @@ Implemented and verified:
 - dual-write into `llm_client` shared runs/items/aggregates
 - read-side reconstruction via `load_result_from_observability()`
 - prompt asset compatibility via `build_prompt_variant_from_ref()`
+- growing acceptable-set evaluation for multi-correct-answer string outputs,
+  with async judge support and local SQLite caching
 - optional MCP server for agent workflows
 
 Resolved boundary decisions:
@@ -62,9 +64,15 @@ variants. Those decisions are recorded in
 and
 [docs/adr/0007-paired-by-input-comparison-mode.md](docs/adr/0007-paired-by-input-comparison-mode.md).
 
-The active roadmap is now complete; future work should start from new evidence
-or a new product goal rather than from leftover architecture ambiguity. Current
-architecture decisions remain tracked in
+The acceptable-set evaluator boundary is now explicit too: `prompt_eval`
+supports a growing acceptable-set helper for string-like alternative answers,
+with typed judge decisions and a local SQLite sidecar cache rather than shared
+observability state. That contract is recorded in
+[docs/adr/0004-growing-acceptable-set-evaluator.md](docs/adr/0004-growing-acceptable-set-evaluator.md).
+
+The active roadmap is now complete again; future work should start from new
+evidence or a new product goal rather than from leftover architecture
+ambiguity. Current architecture decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
 [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
 
@@ -77,6 +85,8 @@ from llm_client import get_model
 from prompt_eval import (
     Experiment,
     ExperimentInput,
+    GoldenSetManager,
+    JudgeDecision,
     PromptEvalObservabilityConfig,
     build_prompt_variant_from_ref,
     compare_variants,
@@ -134,6 +144,16 @@ reloaded = load_result_from_observability(
     project="prompt_eval_examples",
     dataset="tone_eval",
 )
+
+acceptable_set = GoldenSetManager(
+    primary_evaluator=exact_match_evaluator(),
+    fallback_judge=lambda output, expected: JudgeDecision(
+        reasonable=output == "Quarterly revenue rose 18%.",
+        reasoning="Semantic paraphrase accepted",
+        judge_model="example-judge",
+    ),
+)
+acceptable_evaluator = acceptable_set.build_evaluator(experiment_context="tone_eval")
 ```
 
 Notes:
@@ -146,6 +166,9 @@ Notes:
 - Inline message lists still work for compatibility or one-off experiments.
 - Use `comparison_mode="paired_by_input"` when the same `input_id`s are scored
   across variants and you want the matched-input comparison.
+- Use `GoldenSetManager.build_evaluator()` when an evaluator needs to reuse
+  accepted alternative answers across runs. The acceptable-set cache is a local
+  SQLite sidecar, not the authoritative experiment record.
 - `kwargs["task"]` and `kwargs["max_budget"]` override the default
   `prompt_eval.run` call metadata and flow through to `llm_client`.
 

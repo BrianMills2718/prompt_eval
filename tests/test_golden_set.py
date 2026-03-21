@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from prompt_eval.evaluators import EvalScore
-from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager
+from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager, JudgeDecision
 
 
 def _exact_evaluator(output: str, expected: str | None = None) -> float:
@@ -34,6 +34,11 @@ def _counting_judge():
         return {"reasonable": True, "reasoning": f"Call {calls['count']}", "judge_model": "test"}
 
     return judge, calls
+
+
+def _invalid_judge_payload(output: str, expected: str | None = None) -> dict:
+    """Return a malformed judge payload for fail-loud validation tests."""
+    return {"reasonable": True, "reasoning": "Missing judge model"}
 
 
 @pytest.fixture()
@@ -197,5 +202,54 @@ def test_override_invalid_status_raises(db_path: Path) -> None:
         fallback_judge=_always_reasonable_judge,
         db_path=db_path,
     )
+    override = getattr(gsm, "override")
     with pytest.raises(ValueError, match="status must be"):
-        gsm.override("Ref", "Alt", "maybe")
+        override("Ref", "Alt", "maybe")
+
+
+@pytest.mark.asyncio
+async def test_async_judge_is_supported(db_path: Path) -> None:
+    """Async judges work through the async acceptable-set entrypoint."""
+    calls = {"count": 0}
+
+    async def async_judge(output: str, expected: str | None = None) -> JudgeDecision:
+        calls["count"] += 1
+        return JudgeDecision(
+            reasonable=True,
+            reasoning="Reviewed asynchronously",
+            judge_model="async-judge",
+        )
+
+    gsm = GoldenSetManager(
+        primary_evaluator=_exact_evaluator,
+        fallback_judge=async_judge,
+        db_path=db_path,
+    )
+
+    result = await gsm.aevaluate("MilitaryOrg", "MilitaryOrganization")
+    assert result.score >= 0.5
+    assert calls["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_malformed_judge_decision_fails_loudly(db_path: Path) -> None:
+    """Malformed judge payloads raise instead of silently defaulting."""
+    gsm = GoldenSetManager(
+        primary_evaluator=_exact_evaluator,
+        fallback_judge=_invalid_judge_payload,
+        db_path=db_path,
+    )
+
+    with pytest.raises(ValueError, match="invalid JudgeDecision"):
+        await gsm.aevaluate("MilitaryOrg", "MilitaryOrganization")
+
+
+def test_override_missing_entry_fails_loudly(db_path: Path) -> None:
+    """Manual override of a missing record should fail loudly."""
+    gsm = GoldenSetManager(
+        primary_evaluator=_exact_evaluator,
+        fallback_judge=_always_reasonable_judge,
+        db_path=db_path,
+    )
+    with pytest.raises(KeyError, match="No acceptable-set record exists"):
+        gsm.override("UnknownRef", "UnknownAlt", "accepted")

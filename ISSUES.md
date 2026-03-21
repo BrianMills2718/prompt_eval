@@ -4,7 +4,7 @@ Observed problems, concerns, and technical debt. Items start as **unconfirmed**
 observations and get triaged through investigation into confirmed issues, plans,
 or dismissed.
 
-**Last reviewed:** 2026-03-19
+**Last reviewed:** 2026-03-21
 
 ---
 
@@ -59,6 +59,11 @@ tooling first so it matches `prompt_eval`'s real structure.
 
 (Items that need a fix but don't have a plan yet.)
 
+## Planned
+
+| ID | Description | Plan | Date |
+|----|-------------|------|------|
+
 ## Resolved
 
 | ID | Description | Resolution | Date |
@@ -68,6 +73,7 @@ tooling first so it matches `prompt_eval`'s real structure.
 | ISSUE-004 | Statistical Engine Remains Hand-Rolled | `prompt_eval.stats` now uses SciPy-backed Welch and bootstrap inference for the current lightweight comparison API; the remaining paired/clustered design question is tracked separately in `docs/UNCERTAINTIES.md`. | 2026-03-19 |
 | ISSUE-005 | Prompt Asset Policy And Package Scope Were Still Ambiguous | The long-term boundary is now explicit: prompt assets are preferred when available, inline messages remain a permanent supported input, and `prompt_eval` stays prompt-centric. | 2026-03-19 |
 | ISSUE-006 | Stronger Comparison Needed An Explicit Repeated-Measures Mode | `compare_variants()` now keeps pooled comparison as the default and also supports `comparison_mode=\"paired_by_input\"` for matched-input inference. | 2026-03-19 |
+| ISSUE-007 | Growing acceptable-set evaluator existed only as local prototype while downstream repos already depended on the idea | The acceptable-set helper is now a documented public surface with async runner integration, typed judge validation, and focused tests. | 2026-03-21 |
 
 ---
 

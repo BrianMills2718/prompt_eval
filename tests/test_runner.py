@@ -14,6 +14,7 @@ from prompt_eval.experiment import (
     Trial,
 )
 from prompt_eval.evaluators import EvalScore
+from prompt_eval.golden_set import GoldenSetManager, JudgeDecision
 from prompt_eval.observability import PromptEvalObservabilityConfig
 from prompt_eval.runner import run_experiment, _substitute_input, _build_summaries
 
@@ -249,6 +250,65 @@ class TestRunExperiment:
 
         for trial in result.trials:
             assert trial.score == 0.75
+
+    @pytest.mark.asyncio
+    async def test_golden_set_evaluator_reuses_async_judge_decision(self, tmp_path):
+        """Growing acceptable-set evaluator works through run_experiment()."""
+        experiment = Experiment(
+            name="golden_set_runner",
+            variants=[
+                PromptVariant(
+                    name="variant_a",
+                    messages=[{"role": "user", "content": "Pick type for: {input}"}],
+                    model="gemini/gemini-2.5-flash-lite",
+                ),
+            ],
+            inputs=[
+                ExperimentInput(
+                    id="doc1",
+                    content="military org text",
+                    expected="MilitaryOrganization",
+                ),
+            ],
+            n_runs=2,
+        )
+        judge_calls = {"count": 0}
+
+        async def async_judge(output: str, expected: str | None = None) -> JudgeDecision:
+            judge_calls["count"] += 1
+            return JudgeDecision(
+                reasonable=True,
+                reasoning="Ontology-compatible alternative",
+                judge_model="test-judge",
+            )
+
+        manager = GoldenSetManager(
+            primary_evaluator=lambda output, expected: 1.0 if output == expected else 0.0,
+            fallback_judge=async_judge,
+            db_path=tmp_path / "golden_runner.db",
+        )
+
+        # mock-ok: exercising runner/evaluator integration, not the transport layer
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="MilitaryOrg",
+                usage={"total_tokens": 50},
+                cost=0.001,
+                model="test",
+            )
+            result = await run_experiment(
+                experiment,
+                evaluator=manager.build_evaluator(experiment_context="runner-test"),
+                observability=False,
+            )
+
+        assert len(result.trials) == 2
+        assert judge_calls["count"] == 1
+        assert all(trial.score == 0.5 for trial in result.trials)
+        assert result.trials[0].reasoning == "Judge accepted: Ontology-compatible alternative"
+        assert result.trials[1].reasoning == (
+            "Cached accepted alternative: Ontology-compatible alternative"
+        )
 
     @pytest.mark.asyncio
     async def test_eval_score_populates_dimensions(self, simple_experiment):
