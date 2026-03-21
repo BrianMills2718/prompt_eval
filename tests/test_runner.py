@@ -252,6 +252,48 @@ class TestRunExperiment:
             assert trial.score == 0.75
 
     @pytest.mark.asyncio
+    async def test_sync_evaluator_returning_awaitable_is_awaited(self, simple_experiment):
+        """Awaitable-returning wrappers still satisfy the async evaluator contract."""
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="summary text",
+                usage={"total_tokens": 50},
+                cost=0.001,
+                model="test",
+            )
+
+            async def delayed_score() -> float:
+                return 0.65
+
+            def wrapped_eval(output, expected):
+                return delayed_score()
+
+            result = await run_experiment(simple_experiment, evaluator=wrapped_eval)
+
+        for trial in result.trials:
+            assert trial.score == pytest.approx(0.65)
+
+    @pytest.mark.asyncio
+    async def test_invalid_trial_evaluator_result_is_logged(self, simple_experiment, caplog):
+        """Unsupported evaluator return types are surfaced as evaluator failures."""
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="summary text",
+                usage={"total_tokens": 50},
+                cost=0.001,
+                model="test",
+            )
+
+            def invalid_eval(output, expected):
+                return {"score": 1.0}
+
+            with caplog.at_level("WARNING"):
+                result = await run_experiment(simple_experiment, evaluator=invalid_eval)
+
+        assert all(trial.score is None for trial in result.trials)
+        assert "Trial evaluator must return float, int, or EvalScore" in caplog.text
+
+    @pytest.mark.asyncio
     async def test_golden_set_evaluator_reuses_async_judge_decision(self, tmp_path):
         """Growing acceptable-set evaluator works through run_experiment()."""
         experiment = Experiment(
@@ -394,6 +436,25 @@ class TestRunExperiment:
             assert summary.corpus_score == pytest.approx(0.75)
 
     @pytest.mark.asyncio
+    async def test_sync_corpus_evaluator_returning_awaitable_is_awaited(self, simple_experiment):
+        """Awaitable-returning corpus wrappers are awaited like async evaluators."""
+
+        async def delayed_corpus_score() -> float:
+            return 0.55
+
+        def corpus_eval(outputs):
+            return delayed_corpus_score()
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            result = await run_experiment(simple_experiment, corpus_evaluator=corpus_eval)
+
+        for summary in result.summary.values():
+            assert summary.corpus_score == pytest.approx(0.55)
+
+    @pytest.mark.asyncio
     async def test_corpus_evaluator_eval_score(self, simple_experiment):
         """Corpus evaluator returning EvalScore populates dimension scores."""
         def corpus_eval(outputs):
@@ -427,6 +488,25 @@ class TestRunExperiment:
         for summary in result.summary.values():
             assert summary.corpus_score is None
             assert summary.corpus_dimension_scores is None
+
+    @pytest.mark.asyncio
+    async def test_invalid_corpus_evaluator_result_is_logged(self, simple_experiment, caplog):
+        """Unsupported corpus return types are surfaced as evaluator failures."""
+
+        def corpus_eval(outputs):
+            return {"score": 0.6}
+
+        with patch("prompt_eval.runner.acall_llm", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = LLMCallResult(
+                content="text", usage={"total_tokens": 50}, cost=0.001, model="test"
+            )
+            with caplog.at_level("WARNING"):
+                result = await run_experiment(simple_experiment, corpus_evaluator=corpus_eval)
+
+        for summary in result.summary.values():
+            assert summary.corpus_score is None
+            assert summary.corpus_dimension_scores is None
+        assert "Corpus evaluator must return float, int, or EvalScore" in caplog.text
 
     @pytest.mark.asyncio
     async def test_corpus_evaluator_with_regular_evaluator(self, simple_experiment):

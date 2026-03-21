@@ -62,11 +62,17 @@ async def run_experiment(
 
     Args:
         experiment: The experiment definition.
-        evaluator: Optional function(output, expected) -> float score.
-            If None, trials are collected without scores.
-        corpus_evaluator: Optional function(list[outputs]) -> float | EvalScore.
-            Runs once per variant on all its successful outputs.
-            Returns a single aggregate score per variant.
+        evaluator: Optional per-trial evaluator. It may be synchronous or
+            asynchronous and must resolve to either a numeric score or an
+            ``EvalScore``. If None, trials are collected without scores.
+            Evaluator failures are logged and leave the affected trial
+            unscored rather than aborting the whole experiment.
+        corpus_evaluator: Optional corpus-level evaluator. It may be
+            synchronous or asynchronous and must resolve to either a numeric
+            score or an ``EvalScore``. Runs once per variant on all its
+            successful outputs. Corpus-evaluator failures are logged and leave
+            corpus summary fields unset rather than aborting the whole
+            experiment.
         observability: Whether to emit shared llm_client observability records.
             Pass ``False`` to disable emission, ``True`` for default shared
             logging, or ``PromptEvalObservabilityConfig`` to override project,
@@ -186,15 +192,10 @@ async def run_experiment(
                 corpus_results[variant.name] = (None, None)
                 continue
             try:
-                if inspect.iscoroutinefunction(corpus_evaluator):
-                    result = await corpus_evaluator(outputs)
-                else:
-                    result = corpus_evaluator(outputs)
-
-                if isinstance(result, EvalScore):
-                    corpus_results[variant.name] = (result.score, result.dimension_scores)
-                elif isinstance(result, (int, float)):
-                    corpus_results[variant.name] = (float(result), None)
+                result = corpus_evaluator(outputs)
+                if inspect.isawaitable(result):
+                    result = await result
+                corpus_results[variant.name] = _coerce_corpus_evaluator_result(result)
             except Exception as e:
                 logger.warning("Corpus evaluator failed for '%s': %s", variant.name, e)
                 corpus_results[variant.name] = (None, None)
@@ -246,7 +247,7 @@ async def _run_single_trial(
     run_idx: int,
     trace_id: str,
 ) -> Trial:
-    """Execute one LLM call and return a Trial."""
+    """Execute one LLM call, apply optional evaluation, and return a Trial."""
     # Substitute {input} placeholder in user messages
     messages = _substitute_input(variant.messages, inp.content)
 
@@ -282,17 +283,10 @@ async def _run_single_trial(
         reasoning = None
         if evaluator is not None:
             try:
-                if inspect.iscoroutinefunction(evaluator):
-                    eval_result = await evaluator(result, inp.expected)
-                else:
-                    eval_result = evaluator(result, inp.expected)
-
-                if isinstance(eval_result, EvalScore):
-                    score = eval_result.score
-                    dimension_scores = eval_result.dimension_scores
-                    reasoning = eval_result.reasoning
-                elif isinstance(eval_result, (int, float)):
-                    score = float(eval_result)
+                eval_result = evaluator(result, inp.expected)
+                if inspect.isawaitable(eval_result):
+                    eval_result = await eval_result
+                score, dimension_scores, reasoning = _coerce_trial_evaluator_result(eval_result)
             except Exception as e:
                 logger.warning("Evaluator failed for %s/%s: %s", variant.name, inp.id, e)
 
@@ -330,6 +324,34 @@ def _substitute_input(messages: list[dict[str, str]], content: str) -> list[dict
         {**msg, "content": msg["content"].replace("{input}", content)}
         for msg in messages
     ]
+
+
+def _coerce_trial_evaluator_result(
+    eval_result: float | EvalScore,
+) -> tuple[float, dict[str, float] | None, str | None]:
+    """Normalize one per-trial evaluator result or raise on contract drift."""
+    if isinstance(eval_result, EvalScore):
+        return eval_result.score, eval_result.dimension_scores, eval_result.reasoning
+    if isinstance(eval_result, (int, float)):
+        return float(eval_result), None, None
+    raise TypeError(
+        "Trial evaluator must return float, int, or EvalScore, got "
+        f"{type(eval_result).__name__}."
+    )
+
+
+def _coerce_corpus_evaluator_result(
+    eval_result: float | EvalScore,
+) -> tuple[float, dict[str, float] | None]:
+    """Normalize one corpus evaluator result or raise on contract drift."""
+    if isinstance(eval_result, EvalScore):
+        return eval_result.score, eval_result.dimension_scores
+    if isinstance(eval_result, (int, float)):
+        return float(eval_result), None
+    raise TypeError(
+        "Corpus evaluator must return float, int, or EvalScore, got "
+        f"{type(eval_result).__name__}."
+    )
 
 
 def _build_summaries(
