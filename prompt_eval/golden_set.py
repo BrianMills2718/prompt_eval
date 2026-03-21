@@ -41,11 +41,16 @@ JudgeEvaluator: TypeAlias = Callable[
 
 @dataclass(frozen=True)
 class AlternativeRecord:
-    """One entry in the acceptable-alternatives store."""
+    """One persisted acceptable-alternative decision.
+
+    Records the reference value, alternative value, scoped dataset/dimension,
+    and the judge provenance needed to audit why an alternative was accepted or
+    rejected.
+    """
 
     reference_value: str
     alternative_value: str
-    status: str
+    status: AlternativeStatus
     judge_reasoning: str
     judge_model: str
     dataset: str
@@ -440,12 +445,21 @@ def _row_to_record(row: sqlite3.Row) -> AlternativeRecord:
 
 
 def _extract_score(result: Any) -> float:
-    """Extract a float score from an evaluator result."""
+    """Extract a numeric score from one primary evaluator result.
+
+    The acceptable-set wrapper only supports primary evaluators that return a
+    plain numeric score or an ``EvalScore``. Any other return type is a
+    contract violation and raises immediately rather than being treated as a
+    silent miss.
+    """
     if isinstance(result, EvalScore):
         return result.score
     if isinstance(result, (int, float)):
         return float(result)
-    return 0.0
+    raise TypeError(
+        "Primary evaluator must return float, int, or EvalScore, got "
+        f"{type(result).__name__}."
+    )
 
 
 def _coerce_judge_decision(raw_decision: JudgeDecision | Mapping[str, object]) -> JudgeDecision:

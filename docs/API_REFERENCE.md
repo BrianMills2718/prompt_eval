@@ -53,6 +53,7 @@ Defined in:
 - `EvalScore`
 - `RubricDimension`
 - `GoldenSetManager`
+- `AlternativeRecord`
 - `JudgeDecision`
 
 These functions build per-trial evaluator callables. The LLM judge variants use

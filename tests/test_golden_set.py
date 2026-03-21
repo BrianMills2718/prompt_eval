@@ -195,6 +195,22 @@ def test_eval_score_primary(db_path: Path) -> None:
     assert result2.score == 1.0
 
 
+def test_invalid_primary_result_fails_loudly(db_path: Path) -> None:
+    """Unexpected primary evaluator return types raise instead of scoring zero."""
+
+    def invalid_primary(output: str, expected: str | None = None) -> object:
+        return object()
+
+    gsm = GoldenSetManager(
+        primary_evaluator=invalid_primary,
+        fallback_judge=_always_reasonable_judge,
+        db_path=db_path,
+    )
+
+    with pytest.raises(TypeError, match="Primary evaluator must return"):
+        gsm.evaluate("Alt", "Ref")
+
+
 def test_override_invalid_status_raises(db_path: Path) -> None:
     """override() rejects invalid status values."""
     gsm = GoldenSetManager(
