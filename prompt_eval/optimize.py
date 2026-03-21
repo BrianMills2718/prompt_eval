@@ -29,8 +29,8 @@ class SearchSpace(BaseModel):
             "experiment semantics and must not be hidden behind a default."
         )
     )
-    temperatures: list[float] = Field(default=[1.0])
-    kwargs_variants: list[dict[str, Any]] = Field(default=[{}])
+    temperatures: list[float] = Field(default_factory=lambda: [1.0])
+    kwargs_variants: list[dict[str, Any]] = Field(default_factory=lambda: [{}])
 
 
 class FewShotPool(BaseModel):

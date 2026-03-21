@@ -165,3 +165,48 @@ class TestLoadResultFromObservability:
                 project="prompt_eval_tests",
                 dataset="manual_exp",
             )
+
+    def test_invalid_serialized_payload_fails_loudly(self) -> None:
+        """Malformed JSON payloads in shared observability rows should not round-trip silently."""
+
+        run_id = start_run(
+            dataset="manual_bad_json",
+            model="test-model",
+            task="prompt_eval.run",
+            condition_id="variant_a",
+            replicate=0,
+            scenario_id="manual_bad_json",
+            phase="evaluation",
+            provenance={
+                "source_package": "prompt_eval",
+                "experiment_name": "manual_bad_json",
+                "experiment_execution_id": "family_bad_json",
+                "variant_name": "variant_a",
+                "variant_count": 1,
+                "input_count": 1,
+                "n_runs": 1,
+                "prompt_template_sha256": "abc",
+                "prompt_source": "inline_messages",
+            },
+            allow_missing_agent_spec=True,
+            missing_agent_spec_reason="test fixture for prompt_eval query loader",
+            project="prompt_eval_tests",
+        )
+        log_item(
+            run_id=run_id,
+            item_id="doc1",
+            metrics={"score": 0.5},
+            predicted="{not-json",
+            latency_s=0.1,
+            cost=0.01,
+            trace_id="prompt_eval/family_bad_json/variant_a/r0/doc1",
+            extra={"tokens_used": 10, "predicted_format": "json"},
+        )
+        finish_run(run_id=run_id)
+
+        with pytest.raises(ValueError, match="claimed JSON serialization"):
+            load_result_from_observability(
+                "family_bad_json",
+                project="prompt_eval_tests",
+                dataset="manual_bad_json",
+            )

@@ -475,7 +475,7 @@ def _numeric_metric(value: Any) -> float | None:
 
 
 def _deserialize_payload(serialized: str | None, payload_format: str | None) -> Any:
-    """Best-effort reconstruction of stored predicted payloads."""
+    """Reconstruct one stored payload or fail loudly on format drift."""
     if serialized is None:
         return None
     if payload_format is None or payload_format == "text":
@@ -483,8 +483,11 @@ def _deserialize_payload(serialized: str | None, payload_format: str | None) -> 
     if payload_format == "json" or payload_format.startswith("pydantic:"):
         try:
             return json.loads(serialized)
-        except json.JSONDecodeError:
-            return serialized
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "Shared prompt_eval item payload claimed JSON serialization but "
+                f"could not be decoded for format {payload_format!r}."
+            ) from exc
     return serialized
 
 

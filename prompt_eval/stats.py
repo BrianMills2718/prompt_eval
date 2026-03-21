@@ -280,12 +280,12 @@ def _trial_score(trial: Trial, dimension: str | None) -> float | None:
     """Extract one comparable score from a trial."""
 
     if dimension is not None:
-        dimension_scores = getattr(trial, "dimension_scores", None)
+        dimension_scores = trial.dimension_scores
         if dimension_scores is None or dimension not in dimension_scores:
             return None
         return float(dimension_scores[dimension])
 
-    score = getattr(trial, "score", None)
+    score = trial.score
     if score is None:
         return None
     return float(score)
