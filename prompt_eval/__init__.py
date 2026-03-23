@@ -39,6 +39,16 @@ from prompt_eval.query import load_result_from_observability
 from prompt_eval.runner import run_experiment
 from prompt_eval.stats import compare_variants
 from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager, JudgeDecision
+from prompt_eval.scoring import (
+    CriterionScore,
+    Rubric,
+    RubricCriterion,
+    ScoreResult,
+    ascore_output,
+    list_rubrics,
+    load_rubric,
+    score_output,
+)
 from prompt_eval.store import (
     list_results,
     load_experiment,
@@ -80,6 +90,15 @@ __all__ = [
     "llm_judge_dimensional_evaluator",
     "EvalScore",
     "RubricDimension",
+    # Scoring (relocated from llm_client)
+    "Rubric",
+    "RubricCriterion",
+    "CriterionScore",
+    "ScoreResult",
+    "load_rubric",
+    "list_rubrics",
+    "score_output",
+    "ascore_output",
     # Optimization
     "optimize",
     "grid_search",
