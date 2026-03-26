@@ -2,6 +2,10 @@
 
 prompt_eval now emits llm_client observability records by default, so tests must
 isolate llm_client's backing state and environment from the real user machine.
+
+In CI (no model registry / API keys), ``get_model`` raises because no models
+qualify. An autouse fixture patches it to return a stub so evaluator-construction
+tests that mock the actual LLM call still pass.
 """
 
 from __future__ import annotations
@@ -9,10 +13,38 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
-from llm_client import io_log
+from llm_client import get_model, io_log
+
+_STUB_JUDGE_MODEL = "stub-judge-for-ci"
+
+
+def _model_registry_available() -> bool:
+    """Return True if ``get_model('judging')`` resolves without error."""
+    try:
+        get_model("judging")
+        return True
+    except Exception:
+        return False
+
+
+_REGISTRY_OK = _model_registry_available()
+
+
+@pytest.fixture(autouse=True)
+def _stub_get_model_in_ci() -> Iterator[None]:
+    """When the model registry has no configured models (CI), patch get_model."""
+    if _REGISTRY_OK:
+        yield
+        return
+    with patch(
+        "prompt_eval.evaluators.get_model",
+        return_value=_STUB_JUDGE_MODEL,
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)
