@@ -1,10 +1,16 @@
-"""Tests for prompt_eval.evaluators."""
+"""Tests for prompt_eval.evaluators.
+
+LLM judge evaluators now delegate to ``scoring.ascore_output``, so tests
+mock at the scoring layer rather than at the raw LLM call layer. This
+validates the evaluator-to-scoring wiring, return type conversion, and
+backward-compatible interfaces.
+
+Non-LLM evaluators (kappa, exact_match, contains) are tested directly.
+"""
 
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
-from llm_client import LLMCallResult
 
 from prompt_eval.evaluators import (
     EvalScore,
@@ -21,10 +27,26 @@ from prompt_eval.evaluators import (
     llm_judge_dimensional_evaluator,
     llm_judge_evaluator,
 )
-from prompt_eval.prompt_templates import (
-    DIMENSIONAL_JUDGE_TEMPLATE_PATH,
-    SCALAR_JUDGE_TEMPLATE_PATH,
-)
+from prompt_eval.scoring import ScoreResult
+
+
+def _make_score_result(
+    overall: float = 0.75,
+    dimensions: dict[str, int] | None = None,
+    reasoning: dict[str, str] | None = None,
+    judge_model: str = "test-judge",
+) -> ScoreResult:
+    """Helper to build a ScoreResult for mocking ascore_output."""
+    return ScoreResult(
+        rubric="inline",
+        overall_score=overall,
+        dimensions=dimensions or {"quality": 4},
+        reasoning=reasoning or {"quality": "Good work"},
+        judge_model=judge_model,
+        method="llm_judge",
+        cost=0.001,
+        latency_s=0.5,
+    )
 
 
 class TestNormalize:
@@ -109,12 +131,12 @@ class TestKappaEvaluator:
 
         evaluator = kappa_evaluator(extractor)
 
-        # Identical codes → kappa = 1.0
+        # Identical codes -> kappa = 1.0
         output = CodingResult(codes=["trust", "communication"])
         expected = CodingResult(codes=["trust", "communication"])
         assert evaluator(output, expected) == 1.0
 
-        # Subset relationship → kappa = 0.0 (observed == chance agreement
+        # Subset relationship -> kappa = 0.0 (observed == chance agreement
         # because the universe has no true negatives when one is a subset)
         expected_superset = CodingResult(codes=["trust", "communication", "conflict"])
         assert evaluator(output, expected_superset) == 0.0
@@ -157,101 +179,86 @@ class TestContainsEvaluator:
 
 
 class TestLlmJudgeEvaluator:
-    # mock-ok: testing evaluator orchestration, not actual LLM judge quality
+    # mock-ok: testing evaluator-to-scoring delegation, not actual LLM calls
 
-    async def test_clean_score(self) -> None:
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="85", usage={"total_tokens": 100}, cost=0.001, model="test")
+    async def test_returns_float_score(self) -> None:
+        """Evaluator returns a float between 0.0 and 1.0."""
+        mock_result = _make_score_result(overall=0.85)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result):
             ev = llm_judge_evaluator(rubric="Is it good?")
             score = await ev("some output")
-            assert score == 0.85
+            assert score == pytest.approx(0.85)
 
     async def test_default_judge_model_uses_task_selection(self) -> None:
+        """When no judge_model given, uses get_model('judging')."""
+        mock_result = _make_score_result(overall=0.85)
         with (
             patch("prompt_eval.evaluators.get_model", return_value="selected-judge"),
-            patch("prompt_eval.evaluators.acall_llm") as mock,
+            patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score,
         ):
-            mock.return_value = LLMCallResult(
-                content="85",
-                usage={"total_tokens": 100},
-                cost=0.001,
-                model="test",
-            )
             ev = llm_judge_evaluator(rubric="test")
             await ev("some output")
-            assert mock.call_args.args[0] == "selected-judge"
+            # The resolved judge model should be passed to ascore_output
+            assert mock_score.call_args.kwargs["judge_model"] == "selected-judge"
 
-    async def test_clamps_to_range(self) -> None:
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="150", usage={"total_tokens": 100}, cost=0.001, model="test")
+    async def test_clamps_to_unit_range(self) -> None:
+        """Scores are clamped to [0.0, 1.0]."""
+        # Score > 1.0 gets clamped
+        mock_result = _make_score_result(overall=1.5)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result):
             ev = llm_judge_evaluator(rubric="test")
             assert await ev("output") == 1.0
 
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="-30", usage={"total_tokens": 100}, cost=0.001, model="test")
+        # Score < 0.0 gets clamped
+        mock_result = _make_score_result(overall=-0.3)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result):
             ev = llm_judge_evaluator(rubric="test")
             assert await ev("output") == 0.0
 
-    async def test_extracts_number_from_text(self) -> None:
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="Score: 72", usage={"total_tokens": 100}, cost=0.001, model="test")
-            ev = llm_judge_evaluator(rubric="test")
-            assert await ev("output") == 0.72
-
-    async def test_unparseable_raises(self) -> None:
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="I can't score this", usage={"total_tokens": 100}, cost=0.001, model="test")
-            ev = llm_judge_evaluator(rubric="test")
-            with pytest.raises(RuntimeError, match="unparseable score"):
-                await ev("output")
-
-    async def test_includes_expected_in_prompt(self) -> None:
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="90", usage={"total_tokens": 100}, cost=0.001, model="test")
+    async def test_passes_expected_as_context(self) -> None:
+        """When expected is provided, it appears in the context arg."""
+        mock_result = _make_score_result(overall=0.90)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
             ev = llm_judge_evaluator(rubric="test")
             await ev("output", expected="reference answer")
-            call_args = mock.call_args
-            prompt = call_args[0][1][0]["content"]
-            assert "reference answer" in prompt
+            context = mock_score.call_args.kwargs["context"]
+            assert "reference answer" in context
 
     async def test_custom_output_formatter(self) -> None:
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="70", usage={"total_tokens": 100}, cost=0.001, model="test")
+        """output_formatter transforms the output before passing to scoring."""
+        mock_result = _make_score_result(overall=0.70)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
             ev = llm_judge_evaluator(
                 rubric="test",
                 output_formatter=lambda x: f"FORMATTED: {x}",
             )
             await ev("raw output")
-            prompt = mock.call_args[0][1][0]["content"]
-            assert "FORMATTED: raw output" in prompt
+            output_arg = mock_score.call_args.kwargs["output"]
+            assert output_arg == "FORMATTED: raw output"
 
-    async def test_rubric_in_prompt(self) -> None:
-        with patch("prompt_eval.evaluators.acall_llm") as mock:
-            mock.return_value = LLMCallResult(content="50", usage={"total_tokens": 100}, cost=0.001, model="test")
+    async def test_rubric_text_in_inline_rubric(self) -> None:
+        """The rubric text is passed through to the Rubric object."""
+        mock_result = _make_score_result(overall=0.50)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
             ev = llm_judge_evaluator(rubric="Codes must be grounded in participant quotes")
             await ev("some codes")
-            prompt = mock.call_args[0][1][0]["content"]
-            assert "grounded in participant quotes" in prompt
+            rubric_arg = mock_score.call_args.kwargs["rubric"]
+            assert rubric_arg.description == "Codes must be grounded in participant quotes"
 
-    async def test_uses_yaml_template(self) -> None:
-        with (
-            patch(
-                "prompt_eval.prompt_templates.render_prompt",
-                return_value=[{"role": "user", "content": "rendered judge prompt"}],
-            ) as mock_render,
-            patch("prompt_eval.evaluators.acall_llm") as mock,
-        ):
-            mock.return_value = LLMCallResult(
-                content="85",
-                usage={"total_tokens": 100},
-                cost=0.001,
-                model="test",
-            )
+    async def test_explicit_judge_model(self) -> None:
+        """Explicit judge_model overrides the registry default."""
+        mock_result = _make_score_result(overall=0.75)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
+            ev = llm_judge_evaluator(rubric="test", judge_model="custom-model")
+            await ev("output")
+            assert mock_score.call_args.kwargs["judge_model"] == "custom-model"
+
+    async def test_scoring_error_propagates(self) -> None:
+        """Errors from ascore_output propagate to the caller."""
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, side_effect=RuntimeError("judge failed")):
             ev = llm_judge_evaluator(rubric="test")
-            await ev("output", expected="reference")
-
-        assert mock_render.call_args.kwargs["template_path"] == SCALAR_JUDGE_TEMPLATE_PATH
-        assert mock.call_args.args[1] == [{"role": "user", "content": "rendered judge prompt"}]
+            with pytest.raises(RuntimeError, match="judge failed"):
+                await ev("output")
 
 
 class TestBuildDimensionsText:
@@ -274,7 +281,7 @@ class TestBuildDimensionsText:
 
 
 class TestDimensionalEvaluator:
-    # mock-ok: testing evaluator orchestration, not actual LLM judge quality
+    # mock-ok: testing evaluator-to-scoring delegation, not actual LLM calls
 
     @pytest.fixture
     def dimensions(self) -> list[RubricDimension]:
@@ -284,166 +291,196 @@ class TestDimensionalEvaluator:
         ]
 
     async def test_returns_eval_score(self, dimensions: list[RubricDimension]) -> None:
-        verdict = JudgeVerdict(
-            reasoning="Good output overall.",
-            scores=[
-                DimensionScore(dimension="clarity", score=80),
-                DimensionScore(dimension="depth", score=60),
-            ],
-            overall_score=70,
+        """Dimensional evaluator returns EvalScore with per-dimension scores."""
+        # ScoreResult with 1-5 scale raw scores: clarity=4, depth=3
+        # Normalized to 0-1: clarity=(4-1)/4=0.75, depth=(3-1)/4=0.5
+        # Overall: (0.75+0.5)/2=0.625
+        mock_result = _make_score_result(
+            overall=0.625,
+            dimensions={"clarity": 4, "depth": 3},
+            reasoning={"clarity": "Clear writing", "depth": "Some depth"},
         )
-        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
-        with patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock:
-            mock.return_value = (verdict, mock_meta)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result):
             ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
             result = await ev("some output")
 
         assert isinstance(result, EvalScore)
-        assert result.score == pytest.approx(0.7)
-        assert result.dimension_scores["clarity"] == 0.8
-        assert result.dimension_scores["depth"] == 0.6
-        assert "Good output overall." in result.reasoning
+        assert result.score == pytest.approx(0.625)
+        assert result.dimension_scores["clarity"] == pytest.approx(0.75)
+        assert result.dimension_scores["depth"] == pytest.approx(0.5)
+        assert "clarity" in result.reasoning
+        assert "depth" in result.reasoning
 
     async def test_default_dimensional_judge_uses_task_selection(
         self,
         dimensions: list[RubricDimension],
     ) -> None:
-        verdict = JudgeVerdict(
-            reasoning="Good output overall.",
-            scores=[
-                DimensionScore(dimension="clarity", score=80),
-                DimensionScore(dimension="depth", score=60),
-            ],
-            overall_score=70,
-        )
-        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
+        """When no judge_models given, uses get_model('judging')."""
+        mock_result = _make_score_result(overall=0.7)
         with (
             patch("prompt_eval.evaluators.get_model", return_value="selected-judge"),
-            patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock,
+            patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score,
         ):
-            mock.return_value = (verdict, mock_meta)
             ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
             await ev("some output")
-            assert mock.call_args.args[0] == "selected-judge"
+            assert mock_score.call_args.kwargs["judge_model"] == "selected-judge"
 
     async def test_multi_judge_averages(self, dimensions: list[RubricDimension]) -> None:
-        verdict_a = JudgeVerdict(
-            reasoning="Judge A thinks it's okay.",
-            scores=[
-                DimensionScore(dimension="clarity", score=80),
-                DimensionScore(dimension="depth", score=60),
-            ],
-            overall_score=70,
+        """Multiple judges have their scores averaged via ascore_output_multi_judge."""
+        # Multi-judge returns averaged ScoreResult
+        mock_result = _make_score_result(
+            overall=0.625,  # average of two judges
+            dimensions={"clarity": 4, "depth": 4},  # averaged raw scores
+            reasoning={
+                "clarity": "[model-a] Good | [model-b] Great",
+                "depth": "[model-a] Ok | [model-b] Fine",
+            },
+            judge_model="model-a,model-b",
         )
-        verdict_b = JudgeVerdict(
-            reasoning="Judge B thinks it's great.",
-            scores=[
-                DimensionScore(dimension="clarity", score=100),
-                DimensionScore(dimension="depth", score=80),
-            ],
-            overall_score=90,
-        )
-        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
-        with patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock:
-            mock.side_effect = [(verdict_a, mock_meta), (verdict_b, mock_meta)]
+        with patch("prompt_eval.evaluators.ascore_output_multi_judge", new_callable=AsyncMock, return_value=mock_result):
             ev = llm_judge_dimensional_evaluator(
                 dimensions=dimensions,
                 judge_models=["model-a", "model-b"],
             )
             result = await ev("some output")
 
-        assert result.dimension_scores["clarity"] == pytest.approx(0.9)  # (0.8+1.0)/2
-        assert result.dimension_scores["depth"] == pytest.approx(0.7)    # (0.6+0.8)/2
-        assert result.score == pytest.approx(0.8)                        # (0.9+0.7)/2
-        assert "Judge A" in result.reasoning
-        assert "Judge B" in result.reasoning
+        assert isinstance(result, EvalScore)
+        assert result.score == pytest.approx(0.625)
+        assert "model-a" in result.reasoning
+        assert "model-b" in result.reasoning
 
     async def test_weighted_dimensions(self) -> None:
+        """Weighted dimensions are passed through to the Rubric."""
         dims = [
             RubricDimension(name="major", description="Important", weight=3.0),
             RubricDimension(name="minor", description="Less important", weight=1.0),
         ]
-        verdict = JudgeVerdict(
-            reasoning="Test",
-            scores=[
-                DimensionScore(dimension="major", score=80),
-                DimensionScore(dimension="minor", score=40),
-            ],
-            overall_score=70,
+        # Scoring produces weighted result: major=4 (w=3), minor=2 (w=1)
+        # Normalized: major=(4-1)/4=0.75, minor=(2-1)/4=0.25
+        # Weighted overall: (0.75*3 + 0.25*1)/4 = 2.5/4 = 0.625
+        mock_result = _make_score_result(
+            overall=0.625,
+            dimensions={"major": 4, "minor": 2},
+            reasoning={"major": "Good", "minor": "Weak"},
         )
-        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
-        with patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock:
-            mock.return_value = (verdict, mock_meta)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
             ev = llm_judge_dimensional_evaluator(dimensions=dims)
             result = await ev("output")
 
-        # weighted: (0.8*3 + 0.4*1) / 4 = 2.8/4 = 0.7
-        assert result.score == pytest.approx(0.7)
+        # Verify the Rubric passed to ascore_output has correct weights
+        rubric_arg = mock_score.call_args.kwargs["rubric"]
+        weights = {d.name: d.weight for d in rubric_arg.dimensions}
+        assert weights["major"] == 3.0
+        assert weights["minor"] == 1.0
 
     async def test_judge_failure_raises(self, dimensions: list[RubricDimension]) -> None:
-        with patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock:
-            mock.side_effect = Exception("API error")
+        """When scoring fails, the error propagates."""
+        with patch(
+            "prompt_eval.evaluators.ascore_output",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("All 1 judge model(s) failed"),
+        ):
             ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
             with pytest.raises(RuntimeError, match="All 1 judge model"):
                 await ev("output")
 
-    async def test_includes_expected_in_prompt(self, dimensions: list[RubricDimension]) -> None:
-        verdict = JudgeVerdict(
-            reasoning="Ok",
-            scores=[
-                DimensionScore(dimension="clarity", score=50),
-                DimensionScore(dimension="depth", score=50),
-            ],
-            overall_score=50,
-        )
-        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
-        with patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock:
-            mock.return_value = (verdict, mock_meta)
+    async def test_includes_expected_as_context(self, dimensions: list[RubricDimension]) -> None:
+        """When expected is provided, it appears in the context."""
+        mock_result = _make_score_result(overall=0.5)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
             ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
             await ev("output", expected="reference answer")
-            prompt = mock.call_args[0][1][0]["content"]
-            assert "reference answer" in prompt
+            context = mock_score.call_args.kwargs["context"]
+            assert "reference answer" in context
 
     async def test_output_formatter(self, dimensions: list[RubricDimension]) -> None:
-        verdict = JudgeVerdict(
-            reasoning="Ok",
-            scores=[
-                DimensionScore(dimension="clarity", score=50),
-                DimensionScore(dimension="depth", score=50),
-            ],
-            overall_score=50,
-        )
-        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
-        with patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock:
-            mock.return_value = (verdict, mock_meta)
+        """output_formatter transforms output before scoring."""
+        mock_result = _make_score_result(overall=0.5)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
             ev = llm_judge_dimensional_evaluator(
                 dimensions=dimensions,
                 output_formatter=lambda x: f"FORMATTED: {x}",
             )
             await ev("raw output")
-            prompt = mock.call_args[0][1][0]["content"]
-            assert "FORMATTED: raw output" in prompt
+            output_arg = mock_score.call_args.kwargs["output"]
+            assert output_arg == "FORMATTED: raw output"
 
-    async def test_uses_yaml_template(self, dimensions: list[RubricDimension]) -> None:
-        verdict = JudgeVerdict(
-            reasoning="Ok",
-            scores=[
-                DimensionScore(dimension="clarity", score=50),
-                DimensionScore(dimension="depth", score=50),
-            ],
+    async def test_rubric_has_correct_dimensions(self, dimensions: list[RubricDimension]) -> None:
+        """The Rubric object passed to scoring has the right dimensions."""
+        mock_result = _make_score_result(overall=0.5)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
+            ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
+            await ev("output")
+            rubric_arg = mock_score.call_args.kwargs["rubric"]
+            dim_names = [d.name for d in rubric_arg.dimensions]
+            assert "clarity" in dim_names
+            assert "depth" in dim_names
+
+
+class TestRubricFactoryMethods:
+    """Test the Rubric.from_inline and Rubric.from_dimensions classmethods."""
+
+    def test_from_inline_basic(self) -> None:
+        from prompt_eval.scoring import Rubric
+
+        rubric = Rubric.from_inline("Is the output accurate?")
+        assert rubric.name == "inline"
+        assert rubric.description == "Is the output accurate?"
+        assert len(rubric.dimensions) == 1
+        assert rubric.dimensions[0].name == "quality"
+        assert rubric.dimensions[0].scale == 5
+
+    def test_from_inline_custom_name(self) -> None:
+        from prompt_eval.scoring import Rubric
+
+        rubric = Rubric.from_inline("test", name="my_rubric", scale=10)
+        assert rubric.name == "my_rubric"
+        assert rubric.dimensions[0].scale == 10
+
+    def test_from_dimensions_basic(self) -> None:
+        from prompt_eval.scoring import Rubric
+
+        dims = [
+            {"name": "clarity", "description": "Is it clear?", "weight": 1.0},
+            {"name": "depth", "description": "Is it deep?", "weight": 2.0},
+        ]
+        rubric = Rubric.from_dimensions(dims)
+        assert rubric.name == "inline_dimensional"
+        assert len(rubric.dimensions) == 2
+        assert rubric.dimensions[0].name == "clarity"
+        assert rubric.dimensions[1].weight == 2.0
+
+    def test_from_dimensions_with_anchors(self) -> None:
+        from prompt_eval.scoring import Rubric
+
+        dims = [
+            {
+                "name": "quality",
+                "description": "Overall quality",
+                "weight": 1.0,
+                "anchors": {"low": "Poor", "high": "Excellent"},
+            }
+        ]
+        rubric = Rubric.from_dimensions(dims)
+        desc = rubric.dimensions[0].description
+        assert "Overall quality" in desc
+        assert "low: Poor" in desc
+        assert "high: Excellent" in desc
+
+
+class TestBackwardCompatTypes:
+    """Verify backward-compatible types are still importable and constructable."""
+
+    def test_judge_verdict(self) -> None:
+        v = JudgeVerdict(
+            reasoning="test",
+            scores=[DimensionScore(dimension="x", score=50)],
             overall_score=50,
         )
-        mock_meta = LLMCallResult(content="", usage={"total_tokens": 200}, cost=0.002, model="test")
-        with (
-            patch(
-                "prompt_eval.prompt_templates.render_prompt",
-                return_value=[{"role": "user", "content": "rendered dimensional prompt"}],
-            ) as mock_render,
-            patch("prompt_eval.evaluators.acall_llm_structured", new_callable=AsyncMock) as mock,
-        ):
-            mock.return_value = (verdict, mock_meta)
-            ev = llm_judge_dimensional_evaluator(dimensions=dimensions)
-            await ev("output", expected="reference")
+        assert v.reasoning == "test"
+        assert v.scores[0].dimension == "x"
 
-        assert mock_render.call_args.kwargs["template_path"] == DIMENSIONAL_JUDGE_TEMPLATE_PATH
-        assert mock.call_args.args[1] == [{"role": "user", "content": "rendered dimensional prompt"}]
+    def test_dimension_score(self) -> None:
+        ds = DimensionScore(dimension="test", score=75)
+        assert ds.dimension == "test"
+        assert ds.score == 75

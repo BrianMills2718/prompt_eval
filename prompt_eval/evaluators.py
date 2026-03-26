@@ -1,8 +1,16 @@
-"""Evaluator factories for scoring LLM outputs."""
+"""Evaluator factories for scoring LLM outputs.
+
+All LLM judge evaluators delegate to ``scoring.ascore_output`` so that:
+- Judge prompts come from YAML templates (Prompts-as-Data)
+- Judge model selection uses ``get_model("judging")`` from the registry
+- Every evaluation is logged to the observability DB
+- Rubric definitions are reusable across evaluators and experiments
+
+Non-LLM evaluators (kappa, exact_match, contains) remain self-contained.
+"""
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
 from dataclasses import dataclass, field
@@ -10,10 +18,12 @@ from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, Field
 
-from llm_client import acall_llm, acall_llm_structured, get_model
-from prompt_eval.prompt_templates import (
-    render_dimensional_judge_messages,
-    render_scalar_judge_messages,
+from llm_client import get_model
+from prompt_eval.scoring import (
+    Rubric,
+    ScoreResult,
+    ascore_output,
+    ascore_output_multi_judge,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,14 +52,22 @@ class RubricDimension:
 
 
 class DimensionScore(BaseModel):
-    """A single dimension score from the judge (0-100 integer scale)."""
+    """A single dimension score from the judge (0-100 integer scale).
+
+    Kept for backward compatibility with code that references this type.
+    The actual scoring now goes through scoring.ascore_output.
+    """
 
     dimension: str
     score: int = Field(ge=0, le=100)
 
 
 class JudgeVerdict(BaseModel):
-    """Structured judge output with chain-of-thought reasoning."""
+    """Structured judge output with chain-of-thought reasoning.
+
+    Kept for backward compatibility with code that references this type.
+    The actual scoring now goes through scoring.ascore_output.
+    """
 
     reasoning: str
     scores: list[DimensionScore]
@@ -151,76 +169,31 @@ def contains_evaluator(
     return evaluate
 
 
-def llm_judge_evaluator(
-    rubric: str,
-    judge_model: str | None = None,
-    output_formatter: Callable[[Any], str] | None = None,
-    timeout: int = 120,
-) -> Callable:
-    """Create an async evaluator that uses an LLM to score output against a rubric.
+def _score_result_to_float(result: ScoreResult) -> float:
+    """Convert a ScoreResult to a 0.0-1.0 float score."""
+    return max(0.0, min(1.0, result.overall_score))
 
-    The judge LLM receives the rubric and the output, and returns a score
-    between 0.0 and 1.0. If `expected` is provided, it's included for context.
 
-    Args:
-        rubric: Scoring criteria. Can be anything: research questions,
-            quality standards, a grading rubric, methodology requirements.
-        judge_model: Explicit model override for the judge. When omitted,
-            resolves through ``llm_client.get_model("judging")``.
-        output_formatter: Optional function to format the output before
-            sending to the judge. If None, uses str().
-        timeout: Timeout in seconds for the judge LLM call (default: 120).
+def _score_result_to_eval_score(result: ScoreResult) -> EvalScore:
+    """Convert a ScoreResult to an EvalScore with per-dimension scores.
 
-    Returns:
-        Async evaluator function(output, expected) -> float.
+    Normalizes raw dimension scores (on the rubric's 1-5 scale) to 0.0-1.0.
     """
-    resolved_judge_model = judge_model or get_model(_JUDGE_SELECTION_TASK)
+    dim_scores: dict[str, float] = {}
+    for name, raw in result.dimensions.items():
+        # Default scale is 5 (1-5). Normalize: (raw - 1) / (scale - 1)
+        dim_scores[name] = max(0.0, min(1.0, (raw - 1) / 4.0))
 
-    async def evaluate(output: Any, expected: Any = None) -> float:
-        formatted_output = output_formatter(output) if output_formatter else str(output)
+    # Combine reasoning from all dimensions
+    reasoning_parts = []
+    for name, reason in result.reasoning.items():
+        reasoning_parts.append(f"[{name}] {reason}")
 
-        expected_section = ""
-        if expected is not None:
-            expected_str = output_formatter(expected) if output_formatter else str(expected)
-            expected_section = f"## Reference (expected)\n{expected_str}"
-
-        messages = render_scalar_judge_messages(
-            rubric=rubric,
-            output=formatted_output,
-            expected_section=expected_section,
-        )
-
-        output_hash = hashlib.sha256(formatted_output.encode()).hexdigest()[:8]
-        result = await acall_llm(
-            resolved_judge_model,
-            messages,
-            timeout=timeout,
-            task="prompt_eval.evaluate.judge",
-            trace_id=f"prompt_eval.judge.{resolved_judge_model}.{output_hash}",
-            max_budget=0,
-        )
-
-        # Parse integer 0-100 score, convert to 0.0-1.0
-        text = result.content.strip()
-        try:
-            raw = float(text)
-            if raw > 1.0:
-                raw = raw / 100.0  # integer scale -> float
-            return max(0.0, min(1.0, raw))
-        except ValueError:
-            match = re.search(r"(\d+\.?\d*)", text)
-            if match:
-                raw = float(match.group(1))
-                if raw > 1.0:
-                    raw = raw / 100.0
-                return max(0.0, min(1.0, raw))
-            logger.warning("Judge returned unparseable score: %r", text)
-            raise RuntimeError(
-                "Judge model "
-                f"{resolved_judge_model!r} returned an unparseable score: {text!r}"
-            )
-
-    return evaluate
+    return EvalScore(
+        score=max(0.0, min(1.0, result.overall_score)),
+        dimension_scores=dim_scores,
+        reasoning="\n\n".join(reasoning_parts),
+    )
 
 
 def _build_dimensions_text(dimensions: list[RubricDimension]) -> str:
@@ -235,6 +208,58 @@ def _build_dimensions_text(dimensions: list[RubricDimension]) -> str:
     return "\n".join(parts)
 
 
+def llm_judge_evaluator(
+    rubric: str,
+    judge_model: str | None = None,
+    output_formatter: Callable[[Any], str] | None = None,
+    timeout: int = 120,
+) -> Callable:
+    """Create an async evaluator that uses an LLM to score output against a rubric.
+
+    Delegates to ``scoring.ascore_output`` for the actual judge call, ensuring
+    observability logging and consistent judge prompt templates.
+
+    Args:
+        rubric: Scoring criteria. Can be anything: research questions,
+            quality standards, a grading rubric, methodology requirements.
+        judge_model: Explicit model override for the judge. When omitted,
+            resolves through ``llm_client.get_model("judging")``.
+        output_formatter: Optional function to format the output before
+            sending to the judge. If None, uses str().
+        timeout: Timeout in seconds for the judge LLM call (default: 120).
+            Accepted for backward compatibility; the underlying
+            ``ascore_output`` manages its own timeouts.
+
+    Returns:
+        Async evaluator function(output, expected) -> float.
+    """
+    resolved_judge_model = judge_model or get_model(_JUDGE_SELECTION_TASK)
+
+    # Build an inline rubric from the rubric string
+    rubric_obj = Rubric.from_inline(rubric)
+
+    async def evaluate(output: Any, expected: Any = None) -> float:
+        formatted_output = output_formatter(output) if output_formatter else str(output)
+
+        # Build context with expected if provided
+        context = ""
+        if expected is not None:
+            expected_str = output_formatter(expected) if output_formatter else str(expected)
+            context = f"Reference (expected): {expected_str}"
+
+        result = await ascore_output(
+            output=formatted_output,
+            rubric=rubric_obj,
+            context=context,
+            task="prompt_eval.evaluate.judge",
+            judge_model=resolved_judge_model,
+        )
+
+        return _score_result_to_float(result)
+
+    return evaluate
+
+
 def llm_judge_dimensional_evaluator(
     dimensions: list[RubricDimension],
     judge_models: list[str] | None = None,
@@ -243,8 +268,9 @@ def llm_judge_dimensional_evaluator(
 ) -> Callable:
     """Create an async evaluator that scores output on multiple rubric dimensions.
 
-    Uses structured output (JudgeVerdict) to get chain-of-thought reasoning
-    and per-dimension scores from the judge LLM.
+    Delegates to ``scoring.ascore_output`` (single judge) or
+    ``ascore_output_multi_judge`` (multiple judges) for the actual judge
+    call, ensuring observability logging and consistent prompt templates.
 
     Args:
         dimensions: Scoring dimensions with descriptions and optional anchors.
@@ -252,6 +278,8 @@ def llm_judge_dimensional_evaluator(
             multiple). Defaults to ``[get_model("judging")]``.
         output_formatter: Optional function to format output before judging.
         timeout: Timeout in seconds for each judge LLM call (default: 120).
+            Accepted for backward compatibility; the underlying
+            ``ascore_output`` manages its own timeouts.
 
     Returns:
         Async evaluator function(output, expected) -> EvalScore.
@@ -259,66 +287,45 @@ def llm_judge_dimensional_evaluator(
     if judge_models is None:
         judge_models = [get_model(_JUDGE_SELECTION_TASK)]
 
-    dimensions_text = _build_dimensions_text(dimensions)
-    weights = {dim.name: dim.weight for dim in dimensions}
-    total_weight = sum(weights.values())
+    # Build a Rubric from the dimension list
+    rubric_obj = Rubric.from_dimensions(
+        [
+            {
+                "name": dim.name,
+                "description": dim.description,
+                "weight": dim.weight,
+                "anchors": dim.anchors if dim.anchors else None,
+            }
+            for dim in dimensions
+        ]
+    )
 
     async def evaluate(output: Any, expected: Any = None) -> EvalScore:
         formatted_output = output_formatter(output) if output_formatter else str(output)
 
-        expected_section = ""
+        # Build context with expected if provided
+        context = ""
         if expected is not None:
             expected_str = output_formatter(expected) if output_formatter else str(expected)
-            expected_section = f"## Reference (expected)\n{expected_str}"
+            context = f"Reference (expected): {expected_str}"
 
-        messages = render_dimensional_judge_messages(
-            dimensions_text=dimensions_text,
-            output=formatted_output,
-            expected_section=expected_section,
-        )
-
-        all_dim_scores: dict[str, list[float]] = {dim.name: [] for dim in dimensions}
-        all_reasoning: list[str] = []
-
-        for model in judge_models:
-            try:
-                output_hash = hashlib.sha256(formatted_output.encode()).hexdigest()[:8]
-                verdict, _meta = await acall_llm_structured(
-                    model,
-                    messages,
-                    response_model=JudgeVerdict,
-                    timeout=timeout,
-                    task="prompt_eval.evaluate.dimensional_judge",
-                    trace_id=f"prompt_eval.dimensional_judge.{model}.{output_hash}",
-                    max_budget=0,
-                )
-                all_reasoning.append(f"[{model}] {verdict.reasoning}")
-                for ds in verdict.scores:
-                    if ds.dimension in all_dim_scores:
-                        all_dim_scores[ds.dimension].append(ds.score / 100.0)
-            except Exception as e:
-                logger.warning("Judge model %s failed: %s", model, e)
-
-        # Check that at least one judge produced valid scores
-        has_scores = any(scores for scores in all_dim_scores.values())
-        if not has_scores:
-            raise RuntimeError(
-                f"All {len(judge_models)} judge model(s) failed to produce scores"
+        if len(judge_models) == 1:
+            result = await ascore_output(
+                output=formatted_output,
+                rubric=rubric_obj,
+                context=context,
+                task="prompt_eval.evaluate.dimensional_judge",
+                judge_model=judge_models[0],
+            )
+        else:
+            result = await ascore_output_multi_judge(
+                output=formatted_output,
+                rubric=rubric_obj,
+                judge_models=judge_models,
+                context=context,
+                task="prompt_eval.evaluate.dimensional_judge",
             )
 
-        # Average across judges
-        avg_dims: dict[str, float] = {}
-        for name, scores in all_dim_scores.items():
-            avg_dims[name] = sum(scores) / len(scores) if scores else 0.0
-
-        # Weighted average for overall score
-        weighted_sum = sum(avg_dims.get(name, 0.0) * w for name, w in weights.items())
-        overall = weighted_sum / total_weight if total_weight > 0 else 0.0
-
-        return EvalScore(
-            score=max(0.0, min(1.0, overall)),
-            dimension_scores=avg_dims,
-            reasoning="\n\n".join(all_reasoning),
-        )
+        return _score_result_to_eval_score(result)
 
     return evaluate

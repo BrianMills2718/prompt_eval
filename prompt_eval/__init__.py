@@ -45,6 +45,7 @@ from prompt_eval.scoring import (
     RubricCriterion,
     ScoreResult,
     ascore_output,
+    ascore_output_multi_judge,
     list_rubrics,
     load_rubric,
     score_output,
@@ -99,6 +100,7 @@ __all__ = [
     "list_rubrics",
     "score_output",
     "ascore_output",
+    "ascore_output_multi_judge",
     # Optimization
     "optimize",
     "grid_search",

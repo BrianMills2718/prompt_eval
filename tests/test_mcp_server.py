@@ -129,9 +129,19 @@ class TestRunExperimentTool:
             inputs=[ExperimentInput(id="i1", content="hi")],
             n_runs=1,
         )
-        # mock acall_llm for both the experiment run AND the judge call
-        with patch("prompt_eval.evaluators.acall_llm", new_callable=AsyncMock) as mock_judge:
-            mock_judge.return_value = LLMCallResult(content="85", usage={"total_tokens": 100}, cost=0.001, model="test")
+        # mock ascore_output for the judge call (evaluators now delegate to scoring)
+        from prompt_eval.scoring import ScoreResult
+        mock_score_result = ScoreResult(
+            rubric="inline",
+            overall_score=0.85,
+            dimensions={"quality": 4},
+            reasoning={"quality": "Good"},
+            judge_model="test",
+            cost=0.001,
+            latency_s=0.5,
+        )
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock) as mock_judge:
+            mock_judge.return_value = mock_score_result
             result = await _run_experiment_impl(
                 exp.model_dump_json(),
                 evaluator_name="llm_judge",
@@ -206,8 +216,18 @@ class TestEvaluateOutput:
 
     async def test_llm_judge(self) -> None:
         # mock-ok: testing tool orchestration, not actual LLM judge quality
-        with patch("prompt_eval.evaluators.acall_llm", new_callable=AsyncMock) as mock_judge:
-            mock_judge.return_value = LLMCallResult(content="90", usage={"total_tokens": 100}, cost=0.001, model="test")
+        from prompt_eval.scoring import ScoreResult
+        mock_score_result = ScoreResult(
+            rubric="inline",
+            overall_score=0.9,
+            dimensions={"quality": 5},
+            reasoning={"quality": "Great"},
+            judge_model="test",
+            cost=0.001,
+            latency_s=0.5,
+        )
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock) as mock_judge:
+            mock_judge.return_value = mock_score_result
             result = await _evaluate_output_impl(
                 "some output", "llm_judge", rubric="Is it good?"
             )

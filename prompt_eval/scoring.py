@@ -54,7 +54,7 @@ class RubricCriterion(BaseModel):
 
 
 class Rubric(BaseModel):
-    """A scoring rubric loaded from YAML."""
+    """A scoring rubric loaded from YAML or constructed programmatically."""
 
     name: str
     version: int = 1
@@ -64,6 +64,78 @@ class Rubric(BaseModel):
     @property
     def total_weight(self) -> float:
         return sum(d.weight for d in self.dimensions)
+
+    @classmethod
+    def from_inline(
+        cls,
+        rubric_text: str,
+        *,
+        name: str = "inline",
+        scale: int = 5,
+    ) -> "Rubric":
+        """Create a single-dimension rubric from a plain-text rubric string.
+
+        Used by evaluator wrappers that receive a rubric as a string
+        rather than a YAML file reference. The rubric text becomes the
+        sole dimension description, so the judge sees it as criteria.
+
+        Args:
+            rubric_text: The scoring criteria / rubric prose.
+            name: Rubric name for observability (default: "inline").
+            scale: Score scale for the dimension (default: 5).
+        """
+        return cls(
+            name=name,
+            description=rubric_text,
+            dimensions=[
+                RubricCriterion(
+                    name="quality",
+                    weight=1.0,
+                    description=rubric_text,
+                    scale=scale,
+                )
+            ],
+        )
+
+    @classmethod
+    def from_dimensions(
+        cls,
+        dimensions: list[dict[str, Any]],
+        *,
+        name: str = "inline_dimensional",
+        scale: int = 5,
+    ) -> "Rubric":
+        """Create a multi-dimension rubric from a list of dimension dicts.
+
+        Used by the dimensional evaluator wrapper to convert
+        RubricDimension dataclass instances into a proper Rubric.
+
+        Args:
+            dimensions: List of dicts with keys: name, description, weight,
+                and optionally anchors (which are appended to the description).
+            name: Rubric name for observability.
+            scale: Default score scale for each dimension.
+        """
+        criteria = []
+        for dim in dimensions:
+            desc = dim["description"]
+            anchors = dim.get("anchors")
+            if anchors:
+                anchor_lines = [f"  - {level}: {text}" for level, text in anchors.items()]
+                desc = desc + "\n" + "\n".join(anchor_lines)
+            criteria.append(
+                RubricCriterion(
+                    name=dim["name"],
+                    weight=dim.get("weight", 1.0),
+                    description=desc,
+                    scale=scale,
+                )
+            )
+        return cls(
+            name=name,
+            description=f"Multi-dimension rubric with {len(criteria)} criteria",
+            dimensions=criteria,
+        )
 
 
 class CriterionScore(BaseModel):
@@ -298,6 +370,112 @@ async def ascore_output(
     )
 
     return result
+
+
+async def ascore_output_multi_judge(
+    output: str,
+    rubric: str | Rubric,
+    *,
+    judge_models: list[str],
+    context: dict[str, Any] | str = "",
+    task: str | None = None,
+    trace_id: str | None = None,
+) -> ScoreResult:
+    """Score output using multiple judge models and average their scores.
+
+    Each judge independently scores the output against the rubric.
+    Per-dimension scores are averaged across judges, and the overall
+    score is the weighted average of averaged dimensions. Reasoning
+    from all judges is concatenated.
+
+    Args:
+        output: The task output text to score.
+        rubric: Rubric name or Rubric object.
+        judge_models: List of model names to use as judges.
+        context: Task context shown to judges.
+        task: Task tag for observability DB.
+        trace_id: Trace ID for correlation.
+
+    Returns:
+        ScoreResult with averaged scores across all judges.
+
+    Raises:
+        RuntimeError: If all judge models fail.
+    """
+    if isinstance(rubric, str):
+        rubric_obj = load_rubric(rubric)
+    else:
+        rubric_obj = rubric
+
+    results: list[ScoreResult] = []
+    errors: list[str] = []
+
+    for model in judge_models:
+        try:
+            result = await ascore_output(
+                output=output,
+                rubric=rubric_obj,
+                context=context,
+                task=task,
+                trace_id=trace_id,
+                judge_model=model,
+            )
+            results.append(result)
+        except Exception as e:
+            logger.warning("Judge model %s failed: %s", model, e)
+            errors.append(f"{model}: {e}")
+
+    if not results:
+        raise RuntimeError(
+            f"All {len(judge_models)} judge model(s) failed to produce scores: "
+            + "; ".join(errors)
+        )
+
+    # Average per-dimension scores across judges
+    all_dims: dict[str, list[int]] = {}
+    all_reasoning: dict[str, list[str]] = {}
+    total_cost = 0.0
+    total_latency = 0.0
+
+    for r in results:
+        total_cost += r.cost
+        total_latency += r.latency_s
+        for dim_name, score_val in r.dimensions.items():
+            all_dims.setdefault(dim_name, []).append(score_val)
+        for dim_name, reason in r.reasoning.items():
+            all_reasoning.setdefault(dim_name, []).append(
+                f"[{r.judge_model}] {reason}"
+            )
+
+    avg_dimensions: dict[str, int] = {}
+    for name, scores in all_dims.items():
+        avg_dimensions[name] = round(sum(scores) / len(scores))
+
+    merged_reasoning: dict[str, str] = {}
+    for name, reasons in all_reasoning.items():
+        merged_reasoning[name] = " | ".join(reasons)
+
+    # Recompute overall from averaged dimensions
+    total_weighted = 0.0
+    total_weight = 0.0
+    for criterion in rubric_obj.dimensions:
+        raw = avg_dimensions.get(criterion.name)
+        if raw is not None:
+            normalized = (raw - 1) / max(criterion.scale - 1, 1)
+            total_weighted += normalized * criterion.weight
+            total_weight += criterion.weight
+    overall = total_weighted / total_weight if total_weight > 0 else 0.0
+
+    return ScoreResult(
+        rubric=rubric_obj.name,
+        overall_score=round(overall, 4),
+        dimensions=avg_dimensions,
+        reasoning=merged_reasoning,
+        judge_model=",".join(r.judge_model for r in results),
+        method="llm_judge_multi",
+        cost=total_cost,
+        latency_s=round(total_latency, 3),
+    )
 
 
 def score_output(
