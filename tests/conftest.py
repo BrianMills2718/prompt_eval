@@ -48,6 +48,26 @@ def _stub_get_model_in_ci() -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
+def _fix_optimize_module_shadow() -> Iterator[None]:
+    """Restore ``prompt_eval.optimize`` attribute to the module, not the function.
+
+    ``prompt_eval.__init__`` re-exports ``optimize`` (the function) which shadows
+    the ``prompt_eval.optimize`` *module* when accessed via ``getattr``. This
+    breaks ``unittest.mock.patch("prompt_eval.optimize.acall_llm")`` on some
+    Python versions.  We temporarily restore the module attribute so patch()
+    traverses correctly.
+    """
+    import sys
+    import prompt_eval as pkg
+
+    optimize_mod = sys.modules["prompt_eval.optimize"]
+    optimize_fn = pkg.optimize  # the function
+    pkg.optimize = optimize_mod  # type: ignore[assignment]
+    yield
+    pkg.optimize = optimize_fn  # type: ignore[assignment]
+
+
+@pytest.fixture(autouse=True)
 def _isolate_llm_client_observability(tmp_path: Path) -> Iterator[None]:
     """Isolate llm_client observability state for every prompt_eval test."""
     old_enabled = io_log._enabled
