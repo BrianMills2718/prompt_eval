@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from prompt_eval.evaluators import EvalScore
-from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager, JudgeDecision
+from prompt_eval.golden_set import GoldenSetManager, JudgeDecision
 
 
 def _exact_evaluator(output: str, expected: str | None = None) -> float:

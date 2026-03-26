@@ -365,7 +365,7 @@ class TestDimensionalEvaluator:
         )
         with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
             ev = llm_judge_dimensional_evaluator(dimensions=dims)
-            result = await ev("output")
+            await ev("output")
 
         # Verify the Rubric passed to ascore_output has correct weights
         rubric_arg = mock_score.call_args.kwargs["rubric"]
