@@ -8,9 +8,9 @@ from llm_client import LLMCallResult
 from llm_client.observability import finish_run, log_item, start_run
 
 from prompt_eval.evaluators import EvalScore
-from prompt_eval.experiment import Experiment, ExperimentInput, PromptVariant
+from prompt_eval.experiment import Experiment, ExperimentInput, PrecomputedOutput, PromptVariant
 from prompt_eval.query import load_result_from_observability
-from prompt_eval.runner import run_experiment
+from prompt_eval.runner import evaluate_precomputed_variants, run_experiment
 
 
 class TestLoadResultFromObservability:
@@ -210,3 +210,37 @@ class TestLoadResultFromObservability:
                 project="prompt_eval_tests",
                 dataset="manual_bad_json",
             )
+
+    @pytest.mark.asyncio
+    async def test_reconstructs_precomputed_eval_family(self) -> None:
+        inputs = [
+            ExperimentInput(id="case1", content="unused", expected="good"),
+            ExperimentInput(id="case2", content="unused", expected="good"),
+        ]
+        outputs = [
+            PrecomputedOutput(variant_name="literal", input_id="case1", output="good"),
+            PrecomputedOutput(variant_name="literal", input_id="case2", output="bad"),
+            PrecomputedOutput(variant_name="legacy", input_id="case1", output="good"),
+            PrecomputedOutput(variant_name="legacy", input_id="case2", output="good"),
+        ]
+
+        original = await evaluate_precomputed_variants(
+            experiment_name="precomputed_query_exp",
+            inputs=inputs,
+            outputs=outputs,
+            evaluator=lambda output, expected: 1.0 if output == expected else 0.0,
+            observability=True,
+        )
+        assert original.execution_id is not None
+
+        loaded = load_result_from_observability(
+            original.execution_id,
+            project="prompt_eval_tests",
+            dataset="precomputed_query_exp",
+        )
+
+        assert loaded.execution_id == original.execution_id
+        assert loaded.variants == ["literal", "legacy"]
+        assert len(loaded.trials) == 4
+        assert loaded.summary["literal"].mean_score == pytest.approx(0.5)
+        assert loaded.summary["legacy"].mean_score == pytest.approx(1.0)

@@ -59,6 +59,29 @@ class Trial(BaseModel):
     )
 
 
+class PrecomputedOutput(BaseModel):
+    """One externally produced output to evaluate through prompt_eval.
+
+    This keeps `prompt_eval` prompt-centric while still allowing frozen outputs
+    from another system to be scored and compared without reviving alternate
+    runtime modes inside that source system.
+    """
+
+    variant_name: str = Field(description="Variant or condition name for comparison.")
+    input_id: str = Field(description="Input-case identifier matching ExperimentInput.id.")
+    output: Any = Field(default=None, description="Externally produced output payload.")
+    replicate: int = Field(default=0, ge=0, description="Zero-based repeat index.")
+    error: Optional[str] = Field(default=None, description="Optional external failure string.")
+    subject_model: Optional[str] = Field(
+        default=None,
+        description="Optional model that produced the external output, if known.",
+    )
+    provenance: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional caller-supplied provenance for this external output.",
+    )
+
+
 class EvalResult(BaseModel):
     """Aggregated results for an experiment."""
 

@@ -10,13 +10,20 @@ from llm_client.observability import get_run_items, get_runs
 from prompt_eval.experiment import (
     Experiment,
     ExperimentInput,
+    PrecomputedOutput,
     PromptVariant,
     Trial,
 )
 from prompt_eval.evaluators import EvalScore
 from prompt_eval.golden_set import GoldenSetManager, JudgeDecision
 from prompt_eval.observability import PromptEvalObservabilityConfig
-from prompt_eval.runner import run_experiment, _substitute_input, _build_summaries
+from prompt_eval.runner import (
+    _build_summaries,
+    _substitute_input,
+    evaluate_precomputed_variants,
+    run_experiment,
+)
+from prompt_eval.stats import compare_variants
 
 
 class TestSubstituteInput:
@@ -623,3 +630,125 @@ class TestRunExperiment:
         provenance = runs[0]["provenance"]
         assert provenance["prompt_ref"] == "shared.extraction.entity_extract@2"
         assert provenance["prompt_source"] == "prompt_ref"
+
+
+class TestEvaluatePrecomputedVariants:
+
+    @pytest.fixture
+    def inputs(self) -> list[ExperimentInput]:
+        return [
+            ExperimentInput(id="case1", content="unused", expected="good"),
+            ExperimentInput(id="case2", content="unused", expected="good"),
+        ]
+
+    @pytest.mark.asyncio
+    async def test_evaluate_precomputed_variants_builds_eval_result(
+        self,
+        inputs: list[ExperimentInput],
+    ) -> None:
+        outputs = [
+            PrecomputedOutput(variant_name="literal", input_id="case1", output="good"),
+            PrecomputedOutput(variant_name="literal", input_id="case2", output="bad"),
+            PrecomputedOutput(variant_name="legacy", input_id="case1", output="good"),
+            PrecomputedOutput(variant_name="legacy", input_id="case2", output="good"),
+        ]
+
+        result = await evaluate_precomputed_variants(
+            experiment_name="precomputed_eval",
+            inputs=inputs,
+            outputs=outputs,
+            evaluator=lambda output, expected: 1.0 if output == expected else 0.0,
+            observability=False,
+        )
+
+        assert result.variants == ["literal", "legacy"]
+        assert len(result.trials) == 4
+        assert result.summary["literal"].mean_score == pytest.approx(0.5)
+        assert result.summary["legacy"].mean_score == pytest.approx(1.0)
+
+    @pytest.mark.asyncio
+    async def test_evaluate_precomputed_variants_supports_paired_comparison(
+        self,
+        inputs: list[ExperimentInput],
+    ) -> None:
+        outputs = [
+            PrecomputedOutput(variant_name="literal", input_id="case1", output="good"),
+            PrecomputedOutput(variant_name="literal", input_id="case2", output="bad"),
+            PrecomputedOutput(variant_name="legacy", input_id="case1", output="bad"),
+            PrecomputedOutput(variant_name="legacy", input_id="case2", output="good"),
+        ]
+
+        result = await evaluate_precomputed_variants(
+            experiment_name="paired_precomputed_eval",
+            inputs=inputs,
+            outputs=outputs,
+            evaluator=lambda output, expected: 1.0 if output == expected else 0.0,
+            observability=False,
+        )
+        comparison = compare_variants(
+            result,
+            "literal",
+            "legacy",
+            comparison_mode="paired_by_input",
+        )
+
+        assert comparison.n_units == 2
+        assert comparison.difference == pytest.approx(0.0)
+
+    @pytest.mark.asyncio
+    async def test_evaluate_precomputed_variants_runs_corpus_evaluator(
+        self,
+        inputs: list[ExperimentInput],
+    ) -> None:
+        outputs = [
+            PrecomputedOutput(variant_name="literal", input_id="case1", output="good"),
+            PrecomputedOutput(variant_name="literal", input_id="case2", output="bad"),
+            PrecomputedOutput(variant_name="legacy", input_id="case1", output="good"),
+            PrecomputedOutput(variant_name="legacy", input_id="case2", output="good"),
+        ]
+
+        result = await evaluate_precomputed_variants(
+            experiment_name="corpus_precomputed_eval",
+            inputs=inputs,
+            outputs=outputs,
+            evaluator=lambda output, expected: 1.0 if output == expected else 0.0,
+            corpus_evaluator=lambda variant_outputs: 1.0 if all(output == "good" for output in variant_outputs) else 0.5,
+            observability=False,
+        )
+
+        assert result.summary["literal"].corpus_score == pytest.approx(0.5)
+        assert result.summary["legacy"].corpus_score == pytest.approx(1.0)
+
+    @pytest.mark.asyncio
+    async def test_precomputed_variants_emit_truthful_observability(
+        self,
+        inputs: list[ExperimentInput],
+    ) -> None:
+        outputs = [
+            PrecomputedOutput(variant_name="literal", input_id="case1", output="good", subject_model="gpt-5.4-mini"),
+            PrecomputedOutput(variant_name="literal", input_id="case2", output="good", subject_model="gpt-5.4-mini"),
+            PrecomputedOutput(variant_name="legacy", input_id="case1", output="bad", subject_model="gemini-2.5-flash"),
+            PrecomputedOutput(variant_name="legacy", input_id="case2", output="good", subject_model="gemini-2.5-flash"),
+        ]
+
+        result = await evaluate_precomputed_variants(
+            experiment_name="precomputed_observability",
+            inputs=inputs,
+            outputs=outputs,
+            evaluator=lambda output, expected: 1.0 if output == expected else 0.0,
+            observability=PromptEvalObservabilityConfig(
+                project="prompt_eval_precomputed_tests",
+                dataset="precomputed_observability",
+            ),
+        )
+
+        runs = get_runs(
+            project="prompt_eval_precomputed_tests",
+            dataset="precomputed_observability",
+            limit=10,
+        )
+        assert len(runs) == 2
+        assert {run["model"] for run in runs} == {"precomputed"}
+        assert all(run["provenance"]["prompt_source"] == "precomputed_outputs" for run in runs)
+        assert all(run["provenance"]["precomputed"] is True for run in runs)
+        assert all(run["provenance"]["experiment_execution_id"] == result.execution_id for run in runs)

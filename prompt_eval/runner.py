@@ -23,6 +23,7 @@ from prompt_eval.experiment import (
     EvalResult,
     Experiment,
     ExperimentInput,
+    PrecomputedOutput,
     PromptVariant,
     Trial,
     VariantSummary,
@@ -238,6 +239,173 @@ async def run_experiment(
     )
 
 
+async def evaluate_precomputed_variants(
+    *,
+    experiment_name: str,
+    inputs: list[ExperimentInput],
+    outputs: list[PrecomputedOutput],
+    evaluator: Optional[TrialEvaluator] = None,
+    corpus_evaluator: Optional[CorpusEvaluator] = None,
+    observability: bool | PromptEvalObservabilityConfig | None = True,
+) -> EvalResult:
+    """Score and compare externally produced outputs through the normal result contract.
+
+    This path is for frozen outputs produced outside `prompt_eval`, such as
+    archived reports from another repo. It deliberately does not execute the
+    subject system; it only evaluates and summarizes the supplied outputs.
+    """
+    input_by_id = _validate_input_cases(inputs)
+    variant_names, replicate_values = _validate_precomputed_outputs(
+        outputs,
+        input_by_id=input_by_id,
+    )
+    observability_config = _resolve_observability_config(
+        observability,
+        default_phase="evaluation",
+    )
+    execution_id = _experiment_execution_id(observability_config)
+
+    trials: list[Trial] = []
+    trials_by_variant_replicate: dict[tuple[str, int], list[tuple[Trial, ExperimentInput]]] = {}
+    for output in outputs:
+        inp = input_by_id[output.input_id]
+        trace_id = _trace_id(
+            execution_id=execution_id,
+            condition_id=output.variant_name,
+            replicate=output.replicate,
+            item_id=inp.id,
+        )
+        trial = await _trial_from_precomputed_output(
+            output,
+            inp,
+            evaluator,
+            trace_id=trace_id,
+        )
+        trials.append(trial)
+        trials_by_variant_replicate.setdefault((output.variant_name, output.replicate), []).append((trial, inp))
+
+    run_ids_by_variant: dict[str, list[str]] = {}
+    if observability_config is not None:
+        for variant_name in variant_names:
+            for replicate in replicate_values:
+                run_trials = trials_by_variant_replicate[(variant_name, replicate)]
+                run_id = start_observability_run(
+                    dataset=observability_config.dataset or experiment_name,
+                    model="precomputed",
+                    task="prompt_eval.precomputed",
+                    config={
+                        "precomputed": True,
+                        "variant_name": variant_name,
+                        "input_count": len(inputs),
+                    },
+                    condition_id=variant_name,
+                    seed=observability_config.seed,
+                    replicate=replicate,
+                    scenario_id=observability_config.scenario_id or experiment_name,
+                    phase=observability_config.phase,
+                    metrics_schema=["score"] if evaluator is not None else None,
+                    provenance={
+                        "source_package": "prompt_eval",
+                        "experiment_name": experiment_name,
+                        "experiment_execution_id": execution_id,
+                        "variant_name": variant_name,
+                        "variant_count": len(variant_names),
+                        "input_count": len(inputs),
+                        "n_runs": len(replicate_values),
+                        "prompt_source": "precomputed_outputs",
+                        "task": "prompt_eval.precomputed",
+                        "llm_task": "prompt_eval.precomputed",
+                        "precomputed": True,
+                    },
+                    feature_profile=_PROMPT_EVAL_FEATURE_PROFILE,
+                    allow_missing_agent_spec=True,
+                    missing_agent_spec_reason=(
+                        "prompt_eval precomputed comparison runs are evaluation workloads, "
+                        "not agent-spec governed agent tasks"
+                    ),
+                    project=observability_config.project,
+                )
+                run_ids_by_variant.setdefault(variant_name, []).append(run_id)
+                active_run_context = activate_experiment_run(run_id)
+                active_profile_context = activate_feature_profile(_PROMPT_EVAL_FEATURE_PROFILE)
+                active_run_context.__enter__()
+                active_profile_context.__enter__()
+                try:
+                    for trial, inp in run_trials:
+                        log_observability_item(
+                            run_id=run_id,
+                            **_log_item_payload(trial=trial, inp=inp),
+                        )
+                    finish_observability_run(
+                        run_id=run_id,
+                        summary_metrics=_summary_metrics_for_run(
+                            [trial for trial, _inp in run_trials]
+                        ),
+                    )
+                finally:
+                    active_profile_context.__exit__(None, None, None)
+                    active_run_context.__exit__(None, None, None)
+
+    corpus_results: dict[str, tuple[Optional[float], Optional[dict]]] = {}
+    if corpus_evaluator is not None:
+        for variant_name in variant_names:
+            variant_outputs = [
+                trial.output
+                for trial in trials
+                if trial.variant_name == variant_name and trial.output is not None
+            ]
+            if not variant_outputs:
+                logger.warning("No outputs for variant '%s' — skipping corpus eval", variant_name)
+                corpus_results[variant_name] = (None, None)
+                continue
+            try:
+                result = corpus_evaluator(variant_outputs)
+                if inspect.isawaitable(result):
+                    result = await result
+                corpus_results[variant_name] = _coerce_corpus_evaluator_result(result)
+            except Exception as e:
+                logger.warning("Corpus evaluator failed for '%s': %s", variant_name, e)
+                corpus_results[variant_name] = (None, None)
+
+    if observability_config is not None and corpus_evaluator is not None:
+        for variant_name in variant_names:
+            corpus_score, corpus_dimension_scores = corpus_results.get(variant_name, (None, None))
+            aggregate_metrics = _corpus_aggregate_metrics(
+                score=corpus_score,
+                dimension_scores=corpus_dimension_scores,
+            )
+            if aggregate_metrics is None:
+                continue
+            log_experiment_aggregate(
+                dataset=observability_config.dataset or experiment_name,
+                family_id=execution_id,
+                aggregate_type="prompt_eval.corpus_evaluator",
+                condition_id=variant_name,
+                scenario_id=observability_config.scenario_id or experiment_name,
+                phase=observability_config.phase,
+                metrics=aggregate_metrics,
+                provenance={
+                    "source_package": "prompt_eval",
+                    "experiment_name": experiment_name,
+                    "experiment_execution_id": execution_id,
+                    "variant_name": variant_name,
+                    "prompt_source": "precomputed_outputs",
+                    "precomputed": True,
+                },
+                source_run_ids=run_ids_by_variant.get(variant_name, []),
+                project=observability_config.project,
+            )
+
+    summary = _build_summaries(trials, variant_names, corpus_results or None)
+    return EvalResult(
+        experiment_name=experiment_name,
+        execution_id=execution_id,
+        variants=variant_names,
+        trials=trials,
+        summary=summary,
+    )
+
+
 async def _run_single_trial(
     variant: PromptVariant,
     inp: ExperimentInput,
@@ -316,6 +484,120 @@ async def _run_single_trial(
             latency_ms=latency_ms,
             trace_id=trace_id,
         )
+
+
+async def _trial_from_precomputed_output(
+    output: PrecomputedOutput,
+    inp: ExperimentInput,
+    evaluator: Optional[TrialEvaluator],
+    *,
+    trace_id: str,
+) -> Trial:
+    """Apply the normal evaluator contract to one externally produced output."""
+    if output.error is not None:
+        return Trial(
+            variant_name=output.variant_name,
+            input_id=inp.id,
+            replicate=output.replicate,
+            output=None,
+            error=output.error,
+            trace_id=trace_id,
+        )
+
+    score, dimension_scores, reasoning = await _evaluate_output(
+        output.output,
+        inp,
+        evaluator,
+        variant_name=output.variant_name,
+    )
+    return Trial(
+        variant_name=output.variant_name,
+        input_id=inp.id,
+        replicate=output.replicate,
+        output=output.output,
+        score=score,
+        dimension_scores=dimension_scores,
+        reasoning=reasoning,
+        trace_id=trace_id,
+    )
+
+
+async def _evaluate_output(
+    output: Any,
+    inp: ExperimentInput,
+    evaluator: Optional[TrialEvaluator],
+    *,
+    variant_name: str,
+) -> tuple[float | None, dict[str, float] | None, str | None]:
+    """Apply the per-trial evaluator contract to an already-available output."""
+    if evaluator is None:
+        return None, None, None
+    try:
+        eval_result = evaluator(output, inp.expected)
+        if inspect.isawaitable(eval_result):
+            eval_result = await eval_result
+        return _coerce_trial_evaluator_result(eval_result)
+    except Exception as e:
+        logger.warning("Evaluator failed for %s/%s: %s", variant_name, inp.id, e)
+        return None, None, None
+
+
+def _validate_input_cases(inputs: list[ExperimentInput]) -> dict[str, ExperimentInput]:
+    """Fail loudly if the caller supplies duplicate or empty input IDs."""
+    input_by_id: dict[str, ExperimentInput] = {}
+    for inp in inputs:
+        if not inp.id:
+            raise ValueError("ExperimentInput.id must be non-empty for precomputed evaluation.")
+        if inp.id in input_by_id:
+            raise ValueError(f"Duplicate ExperimentInput.id for precomputed evaluation: {inp.id!r}.")
+        input_by_id[inp.id] = inp
+    return input_by_id
+
+
+def _validate_precomputed_outputs(
+    outputs: list[PrecomputedOutput],
+    *,
+    input_by_id: dict[str, ExperimentInput],
+) -> tuple[list[str], list[int]]:
+    """Validate rectangular coverage across variants, inputs, and replicates."""
+    if not outputs:
+        raise ValueError("Precomputed evaluation requires at least one output.")
+    seen_keys: set[tuple[str, str, int]] = set()
+    variant_names: list[str] = []
+    seen_variants: set[str] = set()
+    replicate_values: set[int] = set()
+    coverage: dict[tuple[str, int], set[str]] = {}
+
+    for output in outputs:
+        if output.input_id not in input_by_id:
+            raise ValueError(
+                f"Precomputed output references unknown input_id={output.input_id!r}."
+            )
+        key = (output.variant_name, output.input_id, output.replicate)
+        if key in seen_keys:
+            raise ValueError(f"Duplicate precomputed output for {key!r}.")
+        seen_keys.add(key)
+        if output.variant_name not in seen_variants:
+            variant_names.append(output.variant_name)
+            seen_variants.add(output.variant_name)
+        replicate_values.add(output.replicate)
+        coverage.setdefault((output.variant_name, output.replicate), set()).add(output.input_id)
+
+    expected_inputs = set(input_by_id)
+    ordered_replicates = sorted(replicate_values)
+    if ordered_replicates != list(range(len(ordered_replicates))):
+        raise ValueError(
+            "Precomputed outputs must use contiguous replicate indices starting at 0."
+        )
+    for variant_name in variant_names:
+        for replicate in ordered_replicates:
+            seen_input_ids = coverage.get((variant_name, replicate))
+            if seen_input_ids != expected_inputs:
+                raise ValueError(
+                    "Precomputed outputs must cover every input for each "
+                    f"(variant, replicate). Missing coverage for {(variant_name, replicate)!r}."
+                )
+    return variant_names, ordered_replicates
 
 
 def _substitute_input(messages: list[dict[str, str]], content: str) -> list[dict[str, str]]:

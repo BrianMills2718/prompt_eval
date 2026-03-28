@@ -20,6 +20,7 @@ from prompt_eval.experiment import (
     EvalResult,
     Experiment,
     ExperimentInput,
+    PrecomputedOutput,
     PromptVariant,
     Trial,
     VariantSummary,
@@ -36,7 +37,7 @@ from prompt_eval.optimize import (
 )
 from prompt_eval.prompt_assets import build_prompt_variant_from_ref
 from prompt_eval.query import load_result_from_observability
-from prompt_eval.runner import run_experiment
+from prompt_eval.runner import evaluate_precomputed_variants, run_experiment
 from prompt_eval.stats import compare_variants
 from prompt_eval.golden_set import AlternativeRecord, GoldenSetManager, JudgeDecision
 from prompt_eval.scoring import (
@@ -63,6 +64,7 @@ __all__ = [
     "Experiment",
     "ExperimentInput",
     "EvalResult",
+    "PrecomputedOutput",
     "PromptVariant",
     "PromptEvalObservabilityConfig",
     "Trial",
@@ -70,6 +72,7 @@ __all__ = [
     "build_prompt_variant_from_ref",
     "load_result_from_observability",
     # Runner
+    "evaluate_precomputed_variants",
     "run_experiment",
     # Stats
     "compare_variants",

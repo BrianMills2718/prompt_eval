@@ -70,9 +70,11 @@ with typed judge decisions and a local SQLite sidecar cache rather than shared
 observability state. That contract is recorded in
 [docs/adr/0004-growing-acceptable-set-evaluator.md](docs/adr/0004-growing-acceptable-set-evaluator.md).
 
-The active roadmap is now complete again; future work should start from new
-evidence or a new product goal rather than from leftover architecture
-ambiguity. Current architecture decisions remain tracked in
+The current active program is
+[Plan 11: Precomputed Variant Comparison](docs/plans/11_precomputed_variant_comparison.md),
+which adds the missing shared-eval path for comparing frozen outputs from
+external systems such as `grounded-research` without reviving alternate runtime
+modes. Current architecture decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
 [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
 

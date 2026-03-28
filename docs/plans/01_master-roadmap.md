@@ -233,8 +233,22 @@ true:
 - the feature is proven through direct tests and real runner integration
 - docs describe the local SQLite sidecar honestly
 
+#### Program I: Precomputed Variant Comparison
+
+**Plan:** [11_precomputed_variant_comparison.md](./11_precomputed_variant_comparison.md)
+**Status:** In Progress
+
+**Success criteria:**
+
+- `prompt_eval` can evaluate frozen outputs produced outside `prompt_eval`
+- the result is still a normal `EvalResult`
+- `compare_variants()` works over that result without a second result family
+- the feature stays evaluation-centric and does not become a second execution substrate
+
 ### Current Default Next Step
 
-There is no active unblocked program on the current roadmap. Future work now
-needs new evidence, a new product goal, or a newly discovered defect rather
-than another pending cleanup slice from the current architecture program.
+Current active work is [Plan 11](11_precomputed_variant_comparison.md), driven
+by grounded-research's need to compare Tyler-literal against historical
+calibrated outputs without reviving multiple runtime modes. After Plan 11,
+future work should again require new evidence, a new product goal, or a newly
+discovered defect.
