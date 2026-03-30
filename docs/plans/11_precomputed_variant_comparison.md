@@ -1,6 +1,6 @@
 # Plan 11: Precomputed Variant Comparison
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Type:** implementation
 **Priority:** High
 **Blocked By:** None
@@ -135,12 +135,27 @@ right layer.
 
 ## Acceptance Criteria
 
-- [ ] `prompt_eval` has a first-class entrypoint for evaluating precomputed variant outputs
-- [ ] the new path returns a standard `EvalResult`
-- [ ] `compare_variants()` works on the result, including paired-by-input mode
-- [ ] evaluator and corpus-evaluator paths both work
-- [ ] observability, when enabled, does not pretend `prompt_eval` generated the subject outputs
-- [ ] docs explain when to use this path versus `run_experiment()`
+- [x] `prompt_eval` has a first-class entrypoint for evaluating precomputed variant outputs
+- [x] the new path returns a standard `EvalResult`
+- [x] `compare_variants()` works on the result, including paired-by-input mode
+- [x] evaluator and corpus-evaluator paths both work
+- [x] observability, when enabled, does not pretend `prompt_eval` generated the subject outputs
+- [x] docs explain when to use this path versus `run_experiment()`
+
+## Proof
+
+The grounded-research use case is now proven on a real saved-artifact
+comparison:
+
+- manifest and harness live in
+  `~/projects/grounded-research/config/eval_manifests/tyler_literal_default_eval_wave1.json`
+  and `~/projects/grounded-research/scripts/eval_tyler_variants.py`
+- `prompt_eval` scored the saved Tyler-literal and archived calibrated legacy
+  UBI outputs end to end through `evaluate_precomputed_variants()`
+- resulting artifacts were written to
+  `~/projects/grounded-research/output/tyler_literal_default_eval_wave1/`
+
+That closes the original blocker for this plan.
 
 ---
 

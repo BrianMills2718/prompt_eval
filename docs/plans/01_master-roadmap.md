@@ -218,6 +218,19 @@ true:
   `input_id`
 - pooled comparison remains available and backward compatible
 - paired mode uses off-the-shelf paired inference over matched per-input means
+
+#### Program H: Precomputed Variant Comparison
+
+**Plan:** [11_precomputed_variant_comparison.md](./11_precomputed_variant_comparison.md)
+**Status:** Complete
+
+**Success criteria:**
+
+- `prompt_eval` accepts frozen outputs produced outside its own runner
+- the precomputed path returns a standard `EvalResult`
+- read-side comparison helpers and observability reconstruction still work
+- the grounded-research saved-artifact comparison runs end to end without
+  reviving alternate runtime modes
 - paired mode fails loudly when the repeated-measures contract is not met
 
 #### Program H: Growing Acceptable Set Evaluator

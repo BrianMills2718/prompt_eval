@@ -15,7 +15,7 @@ Canonical planning surface for `prompt_eval`.
 | 7 | [Statistical Engine Modernization](07_statistical-engine-modernization.md) | High | ✅ Complete | - |
 | 8 | [Paired-By-Input Comparison Mode](08_paired-by-input-comparison-mode.md) | High | ✅ Complete | - |
 | 9 | [Growing Acceptable Set Evaluator](09_growing-acceptable-set-evaluator.md) | High | ✅ Complete | - |
-| 11 | [Precomputed Variant Comparison](11_precomputed_variant_comparison.md) | High | 🚧 In Progress | grounded-research Tyler-vs-legacy comparison |
+| 11 | [Precomputed Variant Comparison](11_precomputed_variant_comparison.md) | High | ✅ Complete | - |
 
 ## Status Key
 
@@ -37,7 +37,8 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-Execute [Plan 11](11_precomputed_variant_comparison.md).
+No active implementation plan remains. The next work should come from a new
+cross-project eval requirement or another shared prompt-comparison gap.
 
 ## Trivial Changes
 
