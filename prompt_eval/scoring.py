@@ -305,7 +305,7 @@ async def ascore_output(
 
     # Call judge LLM
     t0 = time.monotonic()
-    from llm_client.client import acall_llm_structured
+    from llm_client import acall_llm_structured
 
     parsed, meta = await acall_llm_structured(
         judge_model,
