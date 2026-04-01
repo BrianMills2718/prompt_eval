@@ -46,3 +46,21 @@ Practical rule:
   only one active claim per plan
 - treat the warning as ergonomic debt, not as proof that sanctioned worktree
   coordination failed
+
+### 2026-04-01 — codex — best-practice
+
+**Once an active-stack repo reaches the mechanical governed baseline, replace
+bootstrap-default linkage with a real ownership and coupling surface before
+treating it as durable shared infrastructure.**
+
+Plan 12 proved that `prompt_eval` could be repaired mechanically, but the repo
+still looked shallow to agents while `scripts/relationships.yaml` stayed
+bootstrap-minimal and no repo-local capability source of record existed. The
+next truthful step was not more installer work; it was a small actionable
+linkage graph plus a local capability decomposition doc.
+
+Practical rule:
+
+- use the shared installer to repair mechanical gaps
+- then deepen linkage and ownership locally before calling the repo a stable
+  shared capability source

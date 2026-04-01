@@ -1,12 +1,80 @@
-# Minimal governed-repo relationships graph scaffold.
+# Linkage graph for prompt_eval's shared-infrastructure role.
 
 required_reading:
   defaults:
     - CLAUDE.md
+    - README.md
+    - docs/plans/CLAUDE.md
 
 governance: []
-couplings: []
-architecture: []
+
+couplings:
+  - sources:
+      - "CLAUDE.md"
+      - "README.md"
+      - "docs/UNCERTAINTIES.md"
+      - "docs/plans/CLAUDE.md"
+      - "docs/ops/CAPABILITY_DECOMPOSITION.md"
+      - "meta-process.yaml"
+      - "scripts/relationships.yaml"
+    docs:
+      - "README.md"
+      - "docs/UNCERTAINTIES.md"
+      - "docs/plans/CLAUDE.md"
+      - "docs/ops/CAPABILITY_DECOMPOSITION.md"
+    description: "Top-level governance and ownership surfaces must stay aligned."
+    why: "These files jointly define the package boundary, current plan state, local ownership source of record, and governance contract."
+  - sources:
+      - "prompt_eval/experiment.py"
+      - "prompt_eval/runner.py"
+      - "prompt_eval/query.py"
+      - "prompt_eval/optimize.py"
+      - "prompt_eval/prompt_assets.py"
+    docs:
+      - "README.md"
+      - "docs/UNCERTAINTIES.md"
+      - "docs/plans/11_precomputed_variant_comparison.md"
+      - "docs/ops/CAPABILITY_DECOMPOSITION.md"
+    description: "Core runtime and optimization surfaces must stay aligned with repo boundary docs."
+    why: "These files define the prompt-centric experiment/evaluation capability that consumer repos depend on."
+  - sources:
+      - "Makefile"
+      - "scripts/CLAUDE.md"
+      - "scripts/check_markdown_links.py"
+      - "scripts/check_doc_coupling.py"
+      - "scripts/meta/*.py"
+      - "scripts/meta/worktree-coordination/*.py"
+    docs:
+      - "CLAUDE.md"
+      - "scripts/CLAUDE.md"
+      - "docs/plans/CLAUDE.md"
+      - "docs/plans/12_governed-baseline-repair-for-active-stack-candidacy.md"
+      - "docs/plans/13_linkage-deepening-and-capability-ownership.md"
+    description: "Governance and worktree helpers must stay aligned with the local workflow contract."
+    why: "These scripts were installed as part of the governed baseline and now define how prompt_eval participates in the active stack."
+
+architecture:
+  - sources:
+      - "prompt_eval/*.py"
+    current:
+      - "README.md"
+      - "docs/UNCERTAINTIES.md"
+    target:
+      - "docs/ops/CAPABILITY_DECOMPOSITION.md"
+    plan_refs:
+      - "docs/plans/13_linkage-deepening-and-capability-ownership.md"
+  - sources:
+      - "scripts/*.py"
+      - "scripts/meta/*.py"
+      - "scripts/meta/worktree-coordination/*.py"
+      - "meta-process.yaml"
+    current:
+      - "CLAUDE.md"
+      - "scripts/CLAUDE.md"
+    target:
+      - "docs/plans/12_governed-baseline-repair-for-active-stack-candidacy.md"
+      - "docs/plans/13_linkage-deepening-and-capability-ownership.md"
+
 adrs: {}
 
 # Optional scoped file coverage policy.

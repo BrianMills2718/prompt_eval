@@ -70,11 +70,16 @@ with typed judge decisions and a local SQLite sidecar cache rather than shared
 observability state. That contract is recorded in
 [docs/adr/0004-growing-acceptable-set-evaluator.md](docs/adr/0004-growing-acceptable-set-evaluator.md).
 
-The current active program is
+Plan 12 repaired the governed baseline and opted `prompt_eval` into sanctioned
+worktree coordination. The current repo-local follow-on is
+[Plan 13: Linkage Deepening And Capability Ownership](docs/plans/13_linkage-deepening-and-capability-ownership.md),
+which replaces bootstrap-only linkage with actionable governance and declares
+the repo-local capability ownership source of record. The most recent product
+capability lane remains
 [Plan 11: Precomputed Variant Comparison](docs/plans/11_precomputed_variant_comparison.md),
-which adds the missing shared-eval path for comparing frozen outputs from
-external systems such as `grounded-research` without reviving alternate runtime
-modes. Current architecture decisions remain tracked in
+which added the shared-eval path for comparing frozen outputs from external
+systems such as `grounded-research` without reviving alternate runtime modes.
+Current architecture decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
 [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
 
@@ -194,11 +199,13 @@ pip install -e .[mcp]
 ```bash
 pytest tests/ -v
 python scripts/meta/sync_plan_status.py --check
+python scripts/check_markdown_links.py README.md CLAUDE.md docs/plans/CLAUDE.md
 ```
 
-This repo does not currently maintain a relationship validator or a formal E2E
-test hierarchy like `llm_client`. The active test suite lives flat under
-[`tests/`](tests).
+This repo now carries the shared governed-repo linkage and validation surfaces
+installed during Plan 12, including the relationship graph and doc-coupling
+helpers. It still does not maintain a formal `tests/e2e/` hierarchy like
+`llm_client`; the active test suite lives flat under [`tests/`](tests).
 
 ## Docs Map
 
@@ -206,6 +213,8 @@ test hierarchy like `llm_client`. The active test suite lives flat under
 - [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md): canonical
   execution roadmap
 - [docs/plans/CLAUDE.md](docs/plans/CLAUDE.md): plan index and statuses
+- [docs/ops/CAPABILITY_DECOMPOSITION.md](docs/ops/CAPABILITY_DECOMPOSITION.md):
+  repo-local capability ownership source of record
 - [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md): unresolved architecture and
   scope questions
 - [docs/adr/README.md](docs/adr/README.md): architecture decision record index

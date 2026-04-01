@@ -18,6 +18,12 @@ meta_process:
   worktrees:
     enabled: true
 
+  capability_ownership:
+    enabled: true
+    source_of_record: "docs/ops/CAPABILITY_DECOMPOSITION.md"
+    shared_registry_required: true
+    source_project: "prompt_eval"
+
   commits:
     require_prefix: true
     valid_prefixes:
