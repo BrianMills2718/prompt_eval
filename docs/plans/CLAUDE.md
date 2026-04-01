@@ -17,6 +17,7 @@ Canonical planning surface for `prompt_eval`.
 | 9 | [Growing Acceptable Set Evaluator](09_growing-acceptable-set-evaluator.md) | High | ✅ Complete | - |
 | 11 | [Precomputed Variant Comparison](11_precomputed_variant_comparison.md) | High | ✅ Complete | - |
 | 12 | [Governed Baseline Repair For Active-Stack Candidacy](12_governed-baseline-repair-for-active-stack-candidacy.md) | High | ✅ Complete | - |
+| 13 | [Linkage Deepening And Capability Ownership](13_linkage-deepening-and-capability-ownership.md) | High | 🚧 In Progress | 12 |
 
 ## Status Key
 
@@ -38,9 +39,10 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-No active implementation plan remains. The next bounded follow-on should deepen
-`scripts/relationships.yaml` beyond bootstrap defaults before any stricter
-doc-coupling or active-stack enforcement wave is claimed for `prompt_eval`.
+Execute [Plan 13](13_linkage-deepening-and-capability-ownership.md) to replace
+the bootstrap-default linkage scaffold, declare repo-local capability
+ownership, and make the shared-infrastructure role discoverable from within the
+repo.
 
 ## Trivial Changes
 
