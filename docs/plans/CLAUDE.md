@@ -17,7 +17,7 @@ Canonical planning surface for `prompt_eval`.
 | 9 | [Growing Acceptable Set Evaluator](09_growing-acceptable-set-evaluator.md) | High | ✅ Complete | - |
 | 11 | [Precomputed Variant Comparison](11_precomputed_variant_comparison.md) | High | ✅ Complete | - |
 | 12 | [Governed Baseline Repair For Active-Stack Candidacy](12_governed-baseline-repair-for-active-stack-candidacy.md) | High | ✅ Complete | - |
-| 13 | [Linkage Deepening And Capability Ownership](13_linkage-deepening-and-capability-ownership.md) | High | 🚧 In Progress | 12 |
+| 13 | [Linkage Deepening And Capability Ownership](13_linkage-deepening-and-capability-ownership.md) | High | ✅ Complete | 12 |
 
 ## Status Key
 
@@ -39,10 +39,9 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-Execute [Plan 13](13_linkage-deepening-and-capability-ownership.md) to replace
-the bootstrap-default linkage scaffold, declare repo-local capability
-ownership, and make the shared-infrastructure role discoverable from within the
-repo.
+No new follow-on plan is active by default. Cut the next hardening plan only if
+rollout evidence shows that `prompt_eval` needs stricter doc-coupling,
+additional capability rows, or stronger consumer-enforcement gates.
 
 ## Trivial Changes
 

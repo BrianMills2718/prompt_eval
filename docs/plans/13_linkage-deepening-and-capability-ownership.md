@@ -1,6 +1,6 @@
 # Plan 13: Linkage Deepening And Capability Ownership
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Type:** implementation
 **Priority:** High
 **Blocked By:** 12
@@ -67,6 +67,7 @@ bootstrap scaffold and no ownership source of truth.
 - `docs/plans/13_linkage-deepening-and-capability-ownership.md` (create)
 - `docs/plans/CLAUDE.md` (modify)
 - `README.md` (modify)
+- `scripts/CLAUDE.md` (modify)
 - `scripts/relationships.yaml` (modify)
 - `meta-process.yaml` (modify)
 - `docs/ops/CAPABILITY_DECOMPOSITION.md` (create)
@@ -114,11 +115,11 @@ bootstrap scaffold and no ownership source of truth.
 
 ## Acceptance Criteria
 
-- [ ] `scripts/relationships.yaml` is no longer bootstrap-minimal
-- [ ] README no longer points to a stale “current active program”
-- [ ] `prompt_eval` declares `capability_ownership` with a real local source of
+- [x] `scripts/relationships.yaml` is no longer bootstrap-minimal
+- [x] README no longer points to a stale “current active program”
+- [x] `prompt_eval` declares `capability_ownership` with a real local source of
       record
-- [ ] repo-local docs make the shared-infrastructure role discoverable without
+- [x] repo-local docs make the shared-infrastructure role discoverable without
       needing to open `project-meta` first
 
 ---
@@ -127,3 +128,13 @@ bootstrap scaffold and no ownership source of truth.
 
 - this plan intentionally stops at the repo boundary; the matching shared
   registry and canonical-source updates happen under `project-meta` Plan 45
+
+## Verification Notes
+
+- `python /home/brian/projects/project-meta_worktrees/plan-41-makefile-meta-sync/scripts/meta/audit_governed_repo.py --repo-root . --json`
+  - `status = PASS`
+  - `relationships_yaml.linkage.status = actionable`
+  - `capability_ownership.declared = true`
+- `python scripts/meta/sync_plan_status.py --check`
+- `python scripts/check_markdown_links.py README.md CLAUDE.md docs/plans/CLAUDE.md docs/plans/13_linkage-deepening-and-capability-ownership.md docs/ops/CAPABILITY_DECOMPOSITION.md KNOWLEDGE.md scripts/CLAUDE.md scripts/relationships.yaml`
+- `python scripts/meta/check_agents_sync.py --check`
