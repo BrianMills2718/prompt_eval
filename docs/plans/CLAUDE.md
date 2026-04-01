@@ -16,7 +16,7 @@ Canonical planning surface for `prompt_eval`.
 | 8 | [Paired-By-Input Comparison Mode](08_paired-by-input-comparison-mode.md) | High | ✅ Complete | - |
 | 9 | [Growing Acceptable Set Evaluator](09_growing-acceptable-set-evaluator.md) | High | ✅ Complete | - |
 | 11 | [Precomputed Variant Comparison](11_precomputed_variant_comparison.md) | High | ✅ Complete | - |
-| 12 | [Governed Baseline Repair For Active-Stack Candidacy](12_governed-baseline-repair-for-active-stack-candidacy.md) | High | 🚧 In Progress | - |
+| 12 | [Governed Baseline Repair For Active-Stack Candidacy](12_governed-baseline-repair-for-active-stack-candidacy.md) | High | ✅ Complete | - |
 
 ## Status Key
 
@@ -38,9 +38,9 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-Execute [Plan 12](12_governed-baseline-repair-for-active-stack-candidacy.md) to
-repair the repo’s governed baseline, rerun the cross-project audit, and only
-then decide whether `prompt_eval` is a truthful sanctioned worktree candidate.
+No active implementation plan remains. The next bounded follow-on should deepen
+`scripts/relationships.yaml` beyond bootstrap defaults before any stricter
+doc-coupling or active-stack enforcement wave is claimed for `prompt_eval`.
 
 ## Trivial Changes
 

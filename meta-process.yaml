@@ -13,10 +13,10 @@ meta_process:
     plans_dir: "docs/plans"
 
   claims:
-    enabled: false
+    enabled: true
 
   worktrees:
-    enabled: false
+    enabled: true
 
   commits:
     require_prefix: true

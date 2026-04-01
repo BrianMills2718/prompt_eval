@@ -1,10 +1,27 @@
 # Plan 12: Governed Baseline Repair For Active-Stack Candidacy
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Type:** implementation
 **Priority:** High
 **Blocked By:** None
 **Blocks:** truthful sanctioned worktree opt-in for `prompt_eval`
+
+**Verified:** 2026-04-01T17:19:00Z
+**Verification Evidence:**
+```yaml
+completed_by: codex
+timestamp: 2026-04-01T17:19:00Z
+checks:
+  governed_audit: PASS (classification=governed)
+  plan_status_sync: PASS
+  plan_validation: PASS
+  markdown_links: PASS
+  tests: 186 passed in 5.86s
+notes:
+  - installer-driven repair landed the governed baseline in one pass
+  - sanctioned worktree opt-in was then enabled explicitly via meta-process.yaml
+  - disposable worktree create/remove proof passed after the shared Makefile block was resynced to release claims on remove
+```
 
 ---
 
@@ -134,19 +151,31 @@ exceptions.
 
 ## Acceptance Criteria
 
-- [ ] repo-local plan surface is truthful about the governed-baseline work
-- [ ] the shared installer lands the missing governed-baseline files or proves a
+- [x] repo-local plan surface is truthful about the governed-baseline work
+- [x] the shared installer lands the missing governed-baseline files or proves a
       bounded gap in shared tooling
-- [ ] `AGENTS.md` becomes refreshable from canonical governance inputs
-- [ ] the repo ends with an explicit audited outcome: `governed` or `partial`
-- [ ] if candidacy is reached, the worktree opt-in decision is explicit and
+- [x] `AGENTS.md` becomes refreshable from canonical governance inputs
+- [x] the repo ends with an explicit audited outcome: `governed`
+- [x] if candidacy is reached, the worktree opt-in decision is explicit and
       proven rather than assumed
 
 ---
 
 ## Notes
 
-- current known uncertainty is whether the shared installer will be sufficient
-  without a bounded manual followthrough
 - the main checkout’s untracked local `docs/plans/10_ci_and_hygiene.md` is not
   part of this clean worktree and should not be silently absorbed here
+
+## Execution Notes
+
+- the shared governed-repo installer repaired the missing `prompt_eval`
+  governed-baseline surfaces in one bounded write pass
+- the repaired worktree re-audited as mechanically `governed`
+- `claims.enabled: true` plus `worktrees.enabled: true` were then enabled
+  explicitly in `meta-process.yaml` to make sanctioned worktree adoption
+  truthful rather than implicit
+- disposable create/remove proof succeeded after the shared sanctioned
+  `worktree-remove` path was updated to release claims after removal
+- because the active worktree already holds Plan 12, the disposable proof branch
+  uses an unscoped temporary claim; this is truthful but ergonomically noisy
+  and should be treated as a future coordination UX follow-on, not a blocker

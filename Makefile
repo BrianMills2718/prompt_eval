@@ -68,6 +68,7 @@ endif
 		exit 1; \
 	fi
 	@python "$(WORKTREE_REMOVE_SCRIPT)" "$(WORKTREE_DIR)/$(BRANCH)"
+	@python "$(WORKTREE_CLAIMS_SCRIPT)" --release --id "$(BRANCH)" --force >/dev/null 2>&1 || true
 # <<< META-PROCESS WORKTREE TARGETS <<<
 
 # --- During Implementation ---
