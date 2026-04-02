@@ -18,24 +18,27 @@ artifact.
   currently reports `status=PASS` and `classification=governed`.
 - The shared validator and renderer now run successfully against
   `truth_surface_drift.yaml`.
-- The first measured findings are all external/shared coordination drift, not
-  `prompt_eval` package drift:
+- The initial unscoped replay found three real issues, but two were unrelated
+  ecosystem noise from other repos.
+- After the scoped replay, the repo-local output is now one actionable local
+  finding:
   - consumed reservation points to a missing old `prompt_eval` worktree plan file
-  - consumed reservation points to a missing old `project-meta` worktree plan file
-  - active work still references completed `agentic_scaffolding` Plan #8
 - The pilot also exposed two framework-level usability issues that were fixed in
   `enforced-planning` during execution:
   - config-declared surface paths were resolved relative to caller cwd instead of config location
   - the status renderer assumed execution from the framework repo root
+- The scoped replay additionally proved that canonical repo identity derivation
+  is enough to keep unrelated `project-meta` and `agentic_scaffolding` registry
+  drift out of the repo-local result.
 
 ## Current Recommendation
 
-Default workflow wiring should remain advisory for now.
+Repo-local scoped validation should be the default operator view, but workflow
+wiring should still remain advisory for now.
 
 Reason:
-- the validator is useful and catches real drift immediately
-- but the first measured failures are dominated by shared-registry hygiene, not
-  repo-local contradictions
+- scoped validation materially improves the local signal
+- one real local historical reservation issue still remains to clean up
 - semantic review is still needed for stale or misleading prose that exact rules
   do not capture
 

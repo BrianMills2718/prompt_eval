@@ -1,5 +1,9 @@
 version: 1
 
+scope:
+  repo_names:
+    - prompt_eval
+
 surfaces:
   tracker_file: docs/ops/TRUTH_SURFACE_PILOT_STATUS.md
   registry_file: ~/.claude/coordination/active-work-registry.yaml
