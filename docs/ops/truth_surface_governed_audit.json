@@ -1,0 +1,171 @@
+{
+  "scope": "mechanical-governed-repo-audit",
+  "repo_root": "/home/brian/projects/prompt_eval_worktrees/plan-15-truth-surface-pilot",
+  "status": "PASS",
+  "classification": "governed",
+  "checks": {
+    "claude_md": {
+      "present": true,
+      "path": "CLAUDE.md"
+    },
+    "relationships_yaml": {
+      "present": true,
+      "path": "scripts/relationships.yaml",
+      "linkage": {
+        "status": "actionable",
+        "governance_rules": 0,
+        "coupling_rules": 3,
+        "architecture_rules": 2,
+        "required_reading_defaults": [
+          "CLAUDE.md",
+          "README.md",
+          "docs/plans/CLAUDE.md"
+        ],
+        "actionable_rules": 5
+      }
+    },
+    "plans_dir": {
+      "present": true,
+      "path": "docs/plans"
+    },
+    "plans_index": {
+      "present": true,
+      "path": "docs/plans/CLAUDE.md"
+    },
+    "agents_md": {
+      "present": true,
+      "path": "AGENTS.md",
+      "refreshable": true,
+      "in_sync": true,
+      "error": null
+    },
+    "capability_ownership": {
+      "config_present": true,
+      "config_path": "meta-process.yaml",
+      "declared": true,
+      "enabled": true,
+      "source_of_record": "docs/ops/CAPABILITY_DECOMPOSITION.md",
+      "source_exists": true,
+      "shared_registry_required": true,
+      "source_project": "prompt_eval",
+      "shared_registry_match_count": 1,
+      "multi_capability_monorepo": false,
+      "shared_registry_matches": [
+        "prompt_eval.prompt_evaluation_and_optimization"
+      ],
+      "warnings": [],
+      "error": null
+    },
+    "worktree_entrypoints": {
+      "config_present": true,
+      "config_path": "meta-process.yaml",
+      "expected": true,
+      "claims_enabled": true,
+      "claims_require_for_worktree": false,
+      "worktrees_enabled": true,
+      "makefile_present": true,
+      "makefile_path": "Makefile",
+      "meta_block_present": true,
+      "targets_present": {
+        "worktree": true,
+        "worktree-list": true,
+        "worktree-remove": true
+      },
+      "scripts_present": {
+        "create_worktree": true,
+        "check_claims": true,
+        "safe_worktree_remove": true
+      },
+      "warnings": [],
+      "error": null
+    },
+    "read_gating": {
+      "present": true,
+      "canonical_fallback_used": false,
+      "hook_source_paths": {
+        ".claude/hooks/gate-edit.sh": "/home/brian/projects/prompt_eval_worktrees/plan-15-truth-surface-pilot/.claude/hooks/gate-edit.sh",
+        ".claude/hooks/track-reads.sh": "/home/brian/projects/prompt_eval_worktrees/plan-15-truth-surface-pilot/.claude/hooks/track-reads.sh"
+      },
+      "settings_source_path": "/home/brian/projects/prompt_eval_worktrees/plan-15-truth-surface-pilot/.claude/settings.json",
+      "settings_present": true,
+      "hook_files_present": [
+        ".claude/hooks/gate-edit.sh",
+        ".claude/hooks/track-reads.sh"
+      ],
+      "hook_files_missing": [],
+      "commands_wired": [
+        "bash .claude/hooks/gate-edit.sh",
+        "bash .claude/hooks/track-reads.sh"
+      ],
+      "commands_missing": []
+    }
+  },
+  "validators": {
+    "file_context": {
+      "present": true,
+      "candidates": [
+        "scripts/meta/file_context.py"
+      ],
+      "resolved": [
+        "scripts/meta/file_context.py"
+      ]
+    },
+    "validate_plan": {
+      "present": true,
+      "candidates": [
+        "scripts/meta/validate_plan.py",
+        "scripts/validate_plan.py"
+      ],
+      "resolved": [
+        "scripts/meta/validate_plan.py"
+      ]
+    },
+    "check_doc_coupling": {
+      "present": true,
+      "candidates": [
+        "scripts/meta/check_doc_coupling.py",
+        "scripts/check_doc_coupling.py"
+      ],
+      "resolved": [
+        "scripts/meta/check_doc_coupling.py",
+        "scripts/check_doc_coupling.py"
+      ]
+    },
+    "sync_plan_status": {
+      "present": true,
+      "candidates": [
+        "scripts/meta/sync_plan_status.py",
+        "scripts/sync_plan_status.py"
+      ],
+      "resolved": [
+        "scripts/meta/sync_plan_status.py",
+        "scripts/sync_plan_status.py"
+      ]
+    },
+    "check_markdown_links": {
+      "present": true,
+      "candidates": [
+        "scripts/check_markdown_links.py"
+      ],
+      "resolved": [
+        "scripts/check_markdown_links.py"
+      ]
+    }
+  },
+  "optional_signals": {
+    "hooks_dir": {
+      "present": true,
+      "path": "hooks/"
+    },
+    "acceptance_gates": {
+      "present": false,
+      "path": "acceptance_gates/"
+    }
+  },
+  "missing_required": [],
+  "limitations": [
+    "This audit checks mechanical governed-repo signals only.",
+    "It does not prove repo-local success criteria or full OpenClaw-readiness.",
+    "It does not author missing repo-specific governance files."
+  ]
+}

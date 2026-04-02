@@ -1,0 +1,20 @@
+version: 1
+
+surfaces:
+  tracker_file: docs/ops/TRUTH_SURFACE_PILOT_STATUS.md
+  registry_file: ~/.claude/coordination/active-work-registry.yaml
+  plan_index_file: docs/plans/CLAUDE.md
+
+checks:
+  consumed_reservations_exist:
+    severity: fail
+
+  no_active_work_for_complete_plans:
+    severity: fail
+
+  audit_claim_rules:
+    rules:
+      - source_pattern: "\\*\\*Governed audit status:\\*\\* (?P<claim>\\w+)"
+        audit_file: docs/ops/truth_surface_governed_audit.json
+        audit_json_path: status
+        severity: fail

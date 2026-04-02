@@ -1,7 +1,7 @@
-# Plan NN: [Name]
+# Plan #N: [Name]
 
-**Status:** 📋 Planned
-**Type:** implementation  <!-- implementation | design | program -->
+**Status:** Planned
+**Type:** implementation  <!-- implementation | design -->
 **Priority:** High | Medium | Low
 **Blocked By:** None
 **Blocks:** None
@@ -20,21 +20,42 @@
 
 ## References Reviewed
 
-> Cite the specific files and docs reviewed before planning.
+> **REQUIRED:** Cite specific code/docs reviewed before planning.
 
-- `prompt_eval/example.py:10-40` - current implementation
-- `docs/UNCERTAINTIES.md` - boundary or open-question context
-- `README.md` - repo-level contract
+- `src/example.py:45-89` - existing implementation
+- `docs/architecture/current/example.md` - current design
+- `CLAUDE.md` - project conventions
+
+---
+
+## Capabilities
+
+> **REQUIRED if this plan creates or modifies callable functions that other projects use.**
+> Each capability is simultaneously: a feature, a tool, a boundary, and a notebook cell.
+
+| Capability | Input Schema | Output Schema | Producer | Consumer(s) | Cost Tier |
+|-----------|-------------|---------------|----------|-------------|-----------|
+| `investigate(question)` | `str` | `InvestigationMemo` | research_v3 | grounded-research, onto-canon6 | expensive |
+| `export_findings(memo)` | `InvestigationMemo` | `list[FindingExport]` | research_v3 | onto-canon6 | free |
+
+### Capability Validation
+
+- [ ] Input/output schemas defined as Pydantic models with Field(description=...)
+- [ ] Each capability registered in tool registry (@tool) or contract registry (@boundary)
+- [ ] Schema validation passes between producer and consumer
+- [ ] Journey notebook has a cell for each capability
+
+> Skip this section for internal-only changes that don't create callable capabilities.
 
 ---
 
 ## Files Affected
 
-> Declare likely touch points upfront.
+> **REQUIRED:** Declare upfront what files will be touched.
 
-- `prompt_eval/example.py` (modify)
-- `tests/test_example.py` (create/modify)
-- `docs/plans/NN_example.md` (update while executing)
+- src/example.py (modify)
+- src/new_feature.py (create)
+- tests/test_feature.py (create)
 
 ---
 
@@ -42,40 +63,56 @@
 
 ### Steps
 
-1. State the thinnest first slice
-2. State the integration point that gets verified when wired
-3. State the next slice only if the first one passes
+1. Create X
+2. Modify Y
+3. Add tests
+4. Update docs
 
 ---
 
 ## Required Tests
 
+> **REQUIRED BEFORE IMPLEMENTATION:** declare the tests and gates that will prove
+> the plan. Write them first where feasible.
+
 ### New Tests (TDD)
 
 | Test File | Test Function | What It Verifies |
 |-----------|---------------|------------------|
-| `tests/test_example.py` | `test_happy_path` | Basic behavior works |
+| `tests/test_example.py` | `test_happy_path` | Basic functionality works |
+| `tests/test_example.py` | `test_error_case` | Errors handled correctly |
 
 ### Existing Tests (Must Pass)
 
 | Test Pattern | Why |
 |--------------|-----|
-| `pytest tests/test_related.py -q` | Nearby behavior stays intact |
+| `tests/test_related.py` | Integration unchanged |
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Focused tests pass
-- [ ] Existing integration points pass when wired
-- [ ] Docs and uncertainty notes are updated if the boundary changed
+> Feature-level criteria (what the plan accomplishes):
+- [ ] [Feature criterion 1]
+- [ ] [Feature criterion 2]
+
+> Process criteria (quality gates):
+- [ ] Required tests pass
+- [ ] Full test suite passes
+- [ ] Type check passes
+- [ ] Docs updated
+
+---
+
+## Open Questions
+
+> Optional. Use when unknowns exist before implementation. See Pattern #28.
+
+- [ ] [Question 1] — Status: OPEN | Why it matters: [...]
+- [ ] [Question 2] — Status: RESOLVED | Answer: [...]
 
 ---
 
 ## Notes
 
-- Call out real blockers, assumptions, and risks.
-- Do not leave `prompt_eval/` changes unlabeled as "trivial."
-- Match verification commands to this repo's real structure; `prompt_eval` does
-  not currently have a formal `tests/e2e/` hierarchy or a relationship
-  validator like `llm_client`.
+[Design decisions, alternatives considered, risks]

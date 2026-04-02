@@ -20,6 +20,7 @@ Canonical planning surface for `prompt_eval`.
 | 12 | [Governed Baseline Repair For Active-Stack Candidacy](12_governed-baseline-repair-for-active-stack-candidacy.md) | High | ✅ Complete | - |
 | 13 | [Linkage Deepening And Capability Ownership](13_linkage-deepening-and-capability-ownership.md) | High | ✅ Complete | 12 |
 | 14 | [Authoritative coordination wave-1 rollout](14_authoritative-coordination-wave-1-rollout.md) | Critical | ✅ Complete | - |
+| 15 | [Truth-surface adoption pilot](15_truth-surface-adoption-pilot.md) | High | ✅ Complete | - |
 
 ## Status Key
 
@@ -41,9 +42,10 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-No new follow-on plan is active by default. Cut the next hardening plan only if
-rollout evidence shows that `prompt_eval` needs stricter doc-coupling,
-additional capability rows, or stronger consumer-enforcement gates.
+No new repo-local follow-on is active by default. Use the measured findings from
+[Plan #15](15_truth-surface-adoption-pilot.md) to inform shared framework
+hardening first, then cut a new local plan only if `prompt_eval` needs stricter
+truth-surface wiring after the framework response lands.
 
 ## Trivial Changes
 
