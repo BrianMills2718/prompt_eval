@@ -71,11 +71,14 @@ observability state. That contract is recorded in
 [docs/adr/0004-growing-acceptable-set-evaluator.md](docs/adr/0004-growing-acceptable-set-evaluator.md).
 
 Plan 12 repaired the governed baseline and opted `prompt_eval` into sanctioned
-worktree coordination. The current repo-local follow-on is
-[Plan 13: Linkage Deepening And Capability Ownership](docs/plans/13_linkage-deepening-and-capability-ownership.md),
-which replaces bootstrap-only linkage with actionable governance and declares
-the repo-local capability ownership source of record. The most recent product
-capability lane remains
+worktree coordination. Plan 13 then replaced bootstrap-only linkage with
+actionable governance and declared the repo-local capability ownership source
+of record. The current governance follow-on is
+[Plan 15: Semantic Truth-Surface Review Pilot](docs/plans/15_semantic-truth-surface-review-pilot.md),
+which adopts the scoped truth-surface validator and optional semantic review
+layer from `enforced-planning` and renders the current operator view into
+[docs/ops/TRUTH_SURFACE_STATUS.md](docs/ops/TRUTH_SURFACE_STATUS.md). The most
+recent product capability lane remains
 [Plan 11: Precomputed Variant Comparison](docs/plans/11_precomputed_variant_comparison.md),
 which added the shared-eval path for comparing frozen outputs from external
 systems such as `grounded-research` without reviving alternate runtime modes.
@@ -204,8 +207,15 @@ python scripts/check_markdown_links.py README.md CLAUDE.md docs/plans/CLAUDE.md
 
 This repo now carries the shared governed-repo linkage and validation surfaces
 installed during Plan 12, including the relationship graph and doc-coupling
-helpers. It still does not maintain a formal `tests/e2e/` hierarchy like
-`llm_client`; the active test suite lives flat under [`tests/`](tests).
+helpers. Plan 15 adds repo-local truth-surface tooling:
+`python scripts/check_truth_surface_drift.py --config truth_surface_drift.yaml`
+for deterministic drift checks,
+`python scripts/review_truth_surface_semantic.py --config truth_surface_drift.yaml ...`
+for optional advisory semantic review, and
+`python scripts/render_truth_surface_status.py --config truth_surface_drift.yaml`
+for the compact operator status view. It still does not maintain a formal
+`tests/e2e/` hierarchy like `llm_client`; the active test suite lives flat under
+[`tests/`](tests).
 
 ## Docs Map
 
@@ -215,6 +225,8 @@ helpers. It still does not maintain a formal `tests/e2e/` hierarchy like
 - [docs/plans/CLAUDE.md](docs/plans/CLAUDE.md): plan index and statuses
 - [docs/ops/CAPABILITY_DECOMPOSITION.md](docs/ops/CAPABILITY_DECOMPOSITION.md):
   repo-local capability ownership source of record
+- [docs/ops/TRUTH_SURFACE_STATUS.md](docs/ops/TRUTH_SURFACE_STATUS.md): current
+  scoped truth-surface status view for this repo
 - [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md): unresolved architecture and
   scope questions
 - [docs/adr/README.md](docs/adr/README.md): architecture decision record index

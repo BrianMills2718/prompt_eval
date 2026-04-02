@@ -64,3 +64,25 @@ Practical rule:
 - use the shared installer to repair mechanical gaps
 - then deepen linkage and ownership locally before calling the repo a stable
   shared capability source
+
+### 2026-04-02 — codex — integration-issue
+
+**Scoped truth-surface validation in `prompt_eval` exposes historical consumed
+reservation paths after proof/worktree cleanup, and semantic review helps show
+how that stale runtime state becomes misleading prose.**
+
+Plan 15 adopted the repo-local truth-surface validator and optional semantic
+review. The first scoped deterministic run was not clean: it found two consumed
+reservations that still pointed at deleted prompt-eval worktree plan files. The
+semantic layer then added useful advisory context by flagging that the plan
+index's current-summary prose looked misleading once those missing artifacts
+were taken into account.
+
+Practical rule:
+
+- treat missing historical consumed-reservation plan files as shared registry
+  hygiene debt, not as a repo-local code bug
+- keep the repo-local rendered truth-surface status because it makes that drift
+  visible to operators without reading raw registry YAML
+- use semantic findings to propose future deterministic promotions, but keep
+  them advisory until the shared framework owns the invariant
