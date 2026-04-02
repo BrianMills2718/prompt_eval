@@ -19,7 +19,7 @@ Canonical planning surface for `prompt_eval`.
 | 11 | [Precomputed Variant Comparison](11_precomputed_variant_comparison.md) | High | ✅ Complete | - |
 | 12 | [Governed Baseline Repair For Active-Stack Candidacy](12_governed-baseline-repair-for-active-stack-candidacy.md) | High | ✅ Complete | - |
 | 13 | [Linkage Deepening And Capability Ownership](13_linkage-deepening-and-capability-ownership.md) | High | ✅ Complete | 12 |
-| 14 | [Authoritative coordination wave-1 rollout](14_authoritative-coordination-wave-1-rollout.md) | Critical | 🚧 In Progress | - |
+| 14 | [Authoritative coordination wave-1 rollout](14_authoritative-coordination-wave-1-rollout.md) | Critical | ✅ Complete | - |
 
 ## Status Key
 
