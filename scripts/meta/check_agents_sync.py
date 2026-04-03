@@ -12,7 +12,7 @@ import argparse
 import difflib
 from pathlib import Path
 
-from render_agents_md import render_agents_markdown, resolve_inputs
+from render_agents_md import DEFAULT_TEMPLATE, render_agents_markdown, resolve_inputs
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--template",
-        default=str(Path(__file__).resolve().parents[2] / "meta-process" / "templates" / "agents.md.template"),
+        default=str(DEFAULT_TEMPLATE),
         help="Path to the AGENTS markdown template",
     )
     parser.add_argument(

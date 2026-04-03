@@ -24,7 +24,30 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_TEMPLATE = ROOT / "meta-process" / "templates" / "agents.md.template"
+DEFAULT_TEMPLATE_CANDIDATES = (
+    ROOT / "meta-process" / "templates" / "agents.md.template",
+    ROOT.parent / "enforced-planning" / "templates" / "agents.md.template",
+    ROOT.parents[1] / "enforced-planning" / "templates" / "agents.md.template",
+)
+
+
+def _resolve_default_template() -> Path:
+    """Return the first existing AGENTS template candidate.
+
+    `project-meta` historically carried the template locally under
+    `meta-process/templates/`. After the framework extraction, clean branches
+    may rely on the portable `~/projects/enforced-planning/templates/` copy
+    instead. Resolve deterministically so generated AGENTS surfaces keep working
+    across both layouts without hardcoded home-directory strings.
+    """
+
+    for candidate in DEFAULT_TEMPLATE_CANDIDATES:
+        if candidate.exists():
+            return candidate
+    return DEFAULT_TEMPLATE_CANDIDATES[0]
+
+
+DEFAULT_TEMPLATE = _resolve_default_template()
 
 SECTION_RE = re.compile(
     r"^##\s+(?P<heading>[^\n]+)\n(?P<body>.*?)(?=^##\s|\Z)",

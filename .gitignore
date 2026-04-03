@@ -8,3 +8,4 @@ dist/
 build/
 .claude/active-work.yaml
 .claude/sessions/
+.claude/hook_log.jsonl
