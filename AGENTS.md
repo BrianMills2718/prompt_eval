@@ -49,6 +49,10 @@ read `CLAUDE.md` directly.
   retrieval, or workflow tooling without an explicit scope decision.
 - `llm_client` remains authoritative for model execution, prompt asset
   resolution, required call metadata, and shared observability.
+- Truth-surface deterministic and semantic review tooling belongs to
+  `enforced-planning`. `prompt_eval` may be used as a governed consumer pilot,
+  but that does not make truth-surface review part of `prompt_eval`'s default
+  product scope unless a later explicit plan broadens the repo boundary.
 - Experiment-semantic choices such as the subject model should be explicit, not
   silently chosen by package defaults.
 - Prompt assets and `prompt_ref` provenance are the preferred long-term

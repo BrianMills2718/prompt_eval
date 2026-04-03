@@ -64,3 +64,24 @@ Practical rule:
 - use the shared installer to repair mechanical gaps
 - then deepen linkage and ownership locally before calling the repo a stable
   shared capability source
+
+### 2026-04-02 — codex — best-practice
+
+**A governed consumer pilot does not automatically become `prompt_eval`
+product scope.**
+
+The semantic truth-surface review pilot used `prompt_eval` as a real consumer
+repo to prove shared governance tooling, but the clean architecture decision
+was to keep ownership in `enforced-planning`, not to turn `prompt_eval` into
+the canonical owner of truth-surface review. The coordination registry should
+therefore record that pilot as historical consumer evidence unless a later
+explicit plan reopens the package boundary.
+
+Practical rule:
+
+- use `prompt_eval` to prove evaluation/governance tooling on a real consumer
+  repo when that is the fastest way to get evidence
+- do not infer permanent repo ownership from that pilot alone
+- if registry lineage says a consumer pilot landed canonically but the repo
+  boundary docs do not, reconcile the lineage toward historical-unlanded rather
+  than widening package scope by accident

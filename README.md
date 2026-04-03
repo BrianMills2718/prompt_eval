@@ -14,6 +14,10 @@ backend.
   metadata (`task=`, `trace_id=`, `max_budget=`), and shared observability.
 - `prompt_eval` owns prompt-centric experiment semantics: variants, replicates,
   evaluators, statistical comparison, and optimization loops.
+- `enforced-planning` owns truth-surface deterministic and semantic review
+  tooling. `prompt_eval` has served as a governed consumer pilot for that
+  tooling, but that pilot does not widen `prompt_eval` into the owner of
+  truth-surface review by default.
 - Local JSON persistence in `prompt_eval.store` remains available as a
   compatibility/export path, but the authoritative shared record is
   `llm_client` observability.
@@ -82,6 +86,12 @@ systems such as `grounded-research` without reviving alternate runtime modes.
 Current architecture decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
 [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
+
+One deliberate non-goal now follows from the cross-project coordination
+cleanup: the semantic truth-surface review pilot remains historical consumer
+evidence, not a canonical `prompt_eval` package lane. If a future roadmap
+slice wants repo-owned truth-surface functionality here, it must reopen that
+boundary explicitly rather than inheriting the pilot by accident.
 
 ## Quick Start
 
