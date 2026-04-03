@@ -85,3 +85,24 @@ Practical rule:
 - if registry lineage says a consumer pilot landed canonically but the repo
   boundary docs do not, reconcile the lineage toward historical-unlanded rather
   than widening package scope by accident
+
+### 2026-04-02 — codex — bug-pattern
+
+**`prompt_eval`'s pre-commit doc-coupling hook currently checks branch delta
+against `origin/main`, not the staged set, so it can false-fail on older branch
+changes even when the current staged docs are correct.**
+
+During the rename-safe `merge_pr.py` replay, `python scripts/meta/check_doc_coupling.py --staged`
+passed once the coupled docs were staged, but the repo's `hooks/pre-commit`
+still failed because it runs `python scripts/check_doc_coupling.py --strict`
+without `--staged`. On a branch already ahead of `origin/main` from an earlier
+Makefile maintenance commit, that hook reported the old Makefile delta instead
+of the staged helper replay.
+
+Practical rule:
+
+- treat `python scripts/meta/check_doc_coupling.py --staged` as the truthful
+  pre-commit check for the current index
+- if the hook fails on branch history instead of staged changes, verify the
+  staged set manually, record the hook false-negative, and fix the hook in a
+  later bounded governance slice rather than pretending the docs are missing

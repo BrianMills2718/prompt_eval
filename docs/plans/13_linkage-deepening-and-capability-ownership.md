@@ -138,3 +138,10 @@ bootstrap scaffold and no ownership source of truth.
 - `python scripts/meta/sync_plan_status.py --check`
 - `python scripts/check_markdown_links.py README.md CLAUDE.md docs/plans/CLAUDE.md docs/plans/13_linkage-deepening-and-capability-ownership.md docs/ops/CAPABILITY_DECOMPOSITION.md KNOWLEDGE.md scripts/CLAUDE.md scripts/relationships.yaml`
 - `python scripts/meta/check_agents_sync.py --check`
+
+## Follow-On Maintenance Note
+
+The linkage surface established here also covers later bounded workflow-helper
+replays. In particular, the local workflow contract now expects rename-safe
+`scripts/meta/merge_pr.py` cleanup so branch-renamed worktrees are removed by
+discovered path rather than a reconstructed branch-derived path.

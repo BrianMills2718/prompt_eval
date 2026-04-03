@@ -45,6 +45,12 @@ No new follow-on plan is active by default. Cut the next hardening plan only if
 rollout evidence shows that `prompt_eval` needs stricter doc-coupling,
 additional capability rows, or stronger consumer-enforcement gates.
 
+Repo-local governance maintenance may still land as bounded `[Unplanned]`
+helper repairs when shared sanctioned-worktree tooling changes upstream. The
+current example is the rename-safe `merge_pr.py` cleanup replay, which keeps
+`prompt_eval` aligned with the shared worktree contract without widening repo
+scope.
+
 ## Trivial Changes
 
 Not every edit needs a plan. `[Trivial]` is appropriate for changes like:

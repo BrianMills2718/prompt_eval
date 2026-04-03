@@ -27,6 +27,9 @@ path:
 
 Some of those helpers were inherited from broader meta-process tooling and may
 still assume conventions that `prompt_eval` does not fully enforce.
+`scripts/meta/merge_pr.py` now uses rename-safe cleanup semantics: when a
+branch is renamed after the worktree is created, cleanup targets the discovered
+worktree path first instead of reconstructing a path from the branch name.
 
 ## Current Limits
 

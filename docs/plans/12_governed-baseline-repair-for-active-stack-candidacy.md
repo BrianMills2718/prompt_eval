@@ -179,3 +179,6 @@ exceptions.
 - because the active worktree already holds Plan 12, the disposable proof branch
   uses an unscoped temporary claim; this is truthful but ergonomically noisy
   and should be treated as a future coordination UX follow-on, not a blocker
+- later shared-helper maintenance may still replay into this repo without
+  reopening Plan 12. The current bounded example is rename-safe `merge_pr.py`
+  cleanup so branch-renamed worktrees release and remove correctly.

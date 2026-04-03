@@ -71,6 +71,10 @@ read `CLAUDE.md` directly.
 4. Edit `CLAUDE.md` first, then resync `AGENTS.md`. Do not hand-maintain two
    divergent instruction files.
 5. Run tests, plan-status checks, and link checks before closing the slice.
+6. Repo-local governance helpers such as `scripts/meta/merge_pr.py` must stay
+   aligned with the sanctioned worktree contract. The current helper uses
+   rename-safe, path-based cleanup when a merged branch name no longer matches
+   the worktree directory created earlier in the flow.
 
 ## Machine-Readable Governance
 
