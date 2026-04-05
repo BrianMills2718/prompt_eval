@@ -16,6 +16,12 @@ from prompt_eval.evaluators import (
     llm_judge_dimensional_evaluator,
     llm_judge_evaluator,
 )
+from prompt_eval.agent_spec import (
+    AgentSpecValidationError,
+    REQUIRED_AGENT_SPEC_SECTIONS,
+    load_agent_spec,
+    validate_agent_spec,
+)
 from prompt_eval.experiment import (
     EvalResult,
     Experiment,
@@ -104,6 +110,11 @@ __all__ = [
     "score_output",
     "ascore_output",
     "ascore_output_multi_judge",
+    # AgentSpec
+    "AgentSpecValidationError",
+    "REQUIRED_AGENT_SPEC_SECTIONS",
+    "load_agent_spec",
+    "validate_agent_spec",
     # Optimization
     "optimize",
     "grid_search",
