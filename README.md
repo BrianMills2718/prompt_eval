@@ -241,3 +241,5 @@ for the compact operator status view. It still does not maintain a formal
   scope questions
 - [docs/adr/README.md](docs/adr/README.md): architecture decision record index
 - [docs/archive/README.md](docs/archive/README.md): archived historical notes
+
+<!-- Governance refresh: 2026-04-05 — enforced_planning contract current -->

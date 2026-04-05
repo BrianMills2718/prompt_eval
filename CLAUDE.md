@@ -41,6 +41,8 @@ python scripts/check_markdown_links.py CLAUDE.md docs/plans/CLAUDE.md scripts/CL
 
 ## Workflow
 
+**Governance install (2026-04-05):** `enforced_planning` governed-repo contract refreshed — worktree coordination scripts and Makefile.worktree up to date. Classification: `governed`.
+
 1. Read `CLAUDE.md`, `README.md`, and the active roadmap or uncertainty docs
    before changing repo behavior.
 2. Anchor non-trivial work to `docs/plans/` and keep the plan index honest.

@@ -62,3 +62,5 @@ Not every edit needs a plan. `[Trivial]` is appropriate for changes like:
 
 Avoid calling something trivial if it changes `prompt_eval/`, the public docs
 contract, or plan/uncertainty status.
+
+<!-- Governance refresh: 2026-04-05 — enforced_planning contract current -->

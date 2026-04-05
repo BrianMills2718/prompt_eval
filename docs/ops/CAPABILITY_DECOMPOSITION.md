@@ -76,3 +76,5 @@ when there is a real integration or a maintained dependency.
   expansion.
 - Some evaluator and optimization helpers still look repo-local in adoption
   practice even when the long-term intent is shared use.
+
+<!-- Governance refresh: 2026-04-05 — enforced_planning contract current -->

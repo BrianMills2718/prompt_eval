@@ -109,3 +109,5 @@ paired inference. More advanced hierarchical models remain out of scope unless
 a future program requires them.
 **Verified in:** `docs/adr/0007-paired-by-input-comparison-mode.md`,
 `docs/plans/08_paired-by-input-comparison-mode.md`, `prompt_eval.stats`
+
+<!-- Governance refresh: 2026-04-05 — enforced_planning contract current -->
