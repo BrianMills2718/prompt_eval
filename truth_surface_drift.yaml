@@ -1,0 +1,24 @@
+version: 1
+
+scope:
+  repo_names:
+    - prompt_eval
+
+surfaces:
+  tracker_file: docs/plans/CLAUDE.md
+  registry_file: ~/.claude/coordination/active-work-registry.yaml
+  plan_index_file: docs/plans/CLAUDE.md
+
+checks:
+  consumed_reservations_exist:
+    severity: fail
+
+  no_active_work_for_complete_plans:
+    severity: fail
+
+  tracker_next_action_claim_conflicts:
+    rules:
+      - tracker_pattern: "No new follow-on plan is active by default\\."
+        project: prompt_eval
+        scope: semantic-truth-surface-pilot
+        severity: fail

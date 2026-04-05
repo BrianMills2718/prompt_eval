@@ -20,6 +20,7 @@ Canonical planning surface for `prompt_eval`.
 | 12 | [Governed Baseline Repair For Active-Stack Candidacy](12_governed-baseline-repair-for-active-stack-candidacy.md) | High | ✅ Complete | - |
 | 13 | [Linkage Deepening And Capability Ownership](13_linkage-deepening-and-capability-ownership.md) | High | ✅ Complete | 12 |
 | 14 | [Authoritative coordination wave-1 rollout](14_authoritative-coordination-wave-1-rollout.md) | Critical | ✅ Complete | - |
+| 15 | [Semantic Truth-Surface Review Pilot](15_semantic-truth-surface-review-pilot.md) | High | ✅ Complete | 14 |
 
 ## Status Key
 
@@ -41,9 +42,8 @@ Canonical planning surface for `prompt_eval`.
 
 ## Current Default Next Step
 
-No new follow-on plan is active by default. Cut the next hardening plan only if
-rollout evidence shows that `prompt_eval` needs stricter doc-coupling,
-additional capability rows, or stronger consumer-enforcement gates.
+No new `prompt_eval`-local follow-on is active by default. Use [Plan 15: Semantic Truth-Surface Review Pilot](15_semantic-truth-surface-review-pilot.md)
+as evidence for shared follow-on work in `enforced-planning` if the ecosystem wants stronger deterministic promotion or registry-hygiene enforcement.
 
 Repo-local governance maintenance may still land as bounded `[Unplanned]`
 helper repairs when shared sanctioned-worktree tooling changes upstream. The
