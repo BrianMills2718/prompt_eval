@@ -1,6 +1,6 @@
 # Capability Decomposition
 
-Last updated: 2026-04-01
+Last updated: 2026-04-05
 
 ## Purpose
 
