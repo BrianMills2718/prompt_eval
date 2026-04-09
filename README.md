@@ -18,6 +18,10 @@ backend.
   tooling. `prompt_eval` has served as a governed consumer pilot for that
   tooling, but that pilot does not widen `prompt_eval` into the owner of
   truth-surface review by default.
+- Repo-local dead-code review now follows the same consumer pattern:
+  `prompt_eval` uses governed dead-code audit tooling and a reviewed
+  `dead_code_audit.json`, but that does not make dead-code policy or framework
+  ownership part of the package's product boundary.
 - Local JSON persistence in `prompt_eval.store` remains available as a
   compatibility/export path, but the authoritative shared record is
   `llm_client` observability.
@@ -89,6 +93,10 @@ systems such as `grounded-research` without reviving alternate runtime modes.
 Current architecture decisions remain tracked in
 [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md) and
 [docs/plans/01_master-roadmap.md](docs/plans/01_master-roadmap.md).
+
+The evaluator timeout ambiguity is now closed too: judge-evaluator `timeout`
+parameters are forwarded through the scoring layer into `llm_client` rather
+than being retained as inert compatibility-only arguments.
 
 One deliberate non-goal now follows from the cross-project coordination
 cleanup: the semantic truth-surface review pilot remains historical consumer

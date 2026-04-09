@@ -274,10 +274,16 @@ endif
 	@python $(SCRIPTS_META)/complete_plan.py --plan $(PLAN)
 
 # --- Quality ---
-.PHONY: dead-code
+.PHONY: dead-code dead-code-audit dead-code-validate
 
 dead-code:  ## Run dead code detection
 	@python $(SCRIPTS_META)/check_dead_code.py
+
+dead-code-audit:  ## Refresh reviewed dead-code audit file
+	@python $(SCRIPTS_META)/audit_dead_code.py --write
+
+dead-code-validate:  ## Validate reviewed dead-code dispositions
+	@python $(SCRIPTS_META)/validate_dead_code_audit.py
 
 # --- Help ---
 .PHONY: help-meta
@@ -302,6 +308,8 @@ help-meta:  ## Show meta-process targets
 	@echo ""
 	@echo "  Quality:"
 	@echo "    dead-code       Run dead code detection"
+	@echo "    dead-code-audit Refresh reviewed dead-code audit file"
+	@echo "    dead-code-validate Validate reviewed dead-code dispositions"
 	@echo ""
 	@echo "  Plans:"
 	@echo "    plan-tests      Check plan tests (PLAN=N)"

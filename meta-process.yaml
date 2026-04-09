@@ -37,6 +37,16 @@ meta_process:
       strict: false
       config_file: "scripts/doc_coupling.yaml"
 
+    dead_code:
+      enabled: true
+      strict: true
+      min_confidence: 80
+      paths:
+        - prompt_eval
+        - scripts
+      whitelist: ".vulture_whitelist.py"
+      audit_file: "dead_code_audit.json"
+
     mock_policy:
       enabled: false
 

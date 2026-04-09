@@ -253,6 +253,14 @@ class TestLlmJudgeEvaluator:
             await ev("output")
             assert mock_score.call_args.kwargs["judge_model"] == "custom-model"
 
+    async def test_timeout_is_forwarded_to_scoring(self) -> None:
+        """Backward-compatible timeout is forwarded to the scoring layer."""
+        mock_result = _make_score_result(overall=0.75)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
+            ev = llm_judge_evaluator(rubric="test", timeout=180)
+            await ev("output")
+            assert mock_score.call_args.kwargs["timeout"] == 180
+
     async def test_scoring_error_propagates(self) -> None:
         """Errors from ascore_output propagate to the caller."""
         with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, side_effect=RuntimeError("judge failed")):
@@ -349,6 +357,23 @@ class TestDimensionalEvaluator:
         assert "model-a" in result.reasoning
         assert "model-b" in result.reasoning
 
+    async def test_multi_judge_timeout_is_forwarded(self, dimensions: list[RubricDimension]) -> None:
+        """Multi-judge dimensional evaluators forward timeout to the multi-judge scorer."""
+        mock_result = _make_score_result(
+            overall=0.625,
+            dimensions={"clarity": 4, "depth": 4},
+            reasoning={"clarity": "Good", "depth": "Good"},
+            judge_model="model-a,model-b",
+        )
+        with patch("prompt_eval.evaluators.ascore_output_multi_judge", new_callable=AsyncMock, return_value=mock_result) as mock_score:
+            ev = llm_judge_dimensional_evaluator(
+                dimensions=dimensions,
+                judge_models=["model-a", "model-b"],
+                timeout=180,
+            )
+            await ev("some output")
+            assert mock_score.call_args.kwargs["timeout"] == 180
+
     async def test_weighted_dimensions(self) -> None:
         """Weighted dimensions are passed through to the Rubric."""
         dims = [
@@ -415,6 +440,14 @@ class TestDimensionalEvaluator:
             dim_names = [d.name for d in rubric_arg.dimensions]
             assert "clarity" in dim_names
             assert "depth" in dim_names
+
+    async def test_dimensional_timeout_is_forwarded(self, dimensions: list[RubricDimension]) -> None:
+        """Dimensional evaluators forward timeout to the underlying scorer."""
+        mock_result = _make_score_result(overall=0.5)
+        with patch("prompt_eval.evaluators.ascore_output", new_callable=AsyncMock, return_value=mock_result) as mock_score:
+            ev = llm_judge_dimensional_evaluator(dimensions=dimensions, timeout=180)
+            await ev("output")
+            assert mock_score.call_args.kwargs["timeout"] == 180
 
 
 class TestRubricFactoryMethods:

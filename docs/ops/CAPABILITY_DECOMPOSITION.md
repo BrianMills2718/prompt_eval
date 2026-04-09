@@ -1,6 +1,6 @@
 # Capability Decomposition
 
-Last updated: 2026-04-05
+Last updated: 2026-04-09
 
 ## Purpose
 
@@ -36,6 +36,10 @@ It does not own:
 
 Those stay in shared infrastructure such as `llm_client` or in consuming
 projects.
+
+The repo now also consumes the governed dead-code audit contract from
+`enforced-planning`. That reviewed audit state is a repo-governance surface,
+not a product capability owned by `prompt_eval`.
 
 ## Capability Ledger
 
@@ -77,4 +81,4 @@ when there is a real integration or a maintained dependency.
 - Some evaluator and optimization helpers still look repo-local in adoption
   practice even when the long-term intent is shared use.
 
-<!-- Governance refresh: 2026-04-05 — enforced_planning contract current -->
+<!-- Governance refresh: 2026-04-09 — enforced_planning contract current -->

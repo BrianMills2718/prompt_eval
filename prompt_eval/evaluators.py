@@ -253,6 +253,7 @@ def llm_judge_evaluator(
             context=context,
             task="prompt_eval.evaluate.judge",
             judge_model=resolved_judge_model,
+            timeout=timeout,
         )
 
         return _score_result_to_float(result)
@@ -316,6 +317,7 @@ def llm_judge_dimensional_evaluator(
                 context=context,
                 task="prompt_eval.evaluate.dimensional_judge",
                 judge_model=judge_models[0],
+                timeout=timeout,
             )
         else:
             result = await ascore_output_multi_judge(
@@ -324,6 +326,7 @@ def llm_judge_dimensional_evaluator(
                 judge_models=judge_models,
                 context=context,
                 task="prompt_eval.evaluate.dimensional_judge",
+                timeout=timeout,
             )
 
         return _score_result_to_eval_score(result)

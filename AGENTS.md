@@ -34,6 +34,9 @@ python scripts/meta/check_plan_blockers.py --strict
 python scripts/meta/check_plan_tests.py --plan 1
 mypy prompt_eval tests
 ruff check prompt_eval tests
+make dead-code
+make dead-code-audit
+make dead-code-validate
 python scripts/check_markdown_links.py CLAUDE.md docs/plans/CLAUDE.md scripts/CLAUDE.md
 ```
 
@@ -72,11 +75,12 @@ read `CLAUDE.md` directly.
    `prompt_eval` versus `llm_client` boundary, document the decision.
 4. Edit `CLAUDE.md` first, then resync `AGENTS.md`. Do not hand-maintain two
    divergent instruction files.
-5. Run tests, plan-status checks, and link checks before closing the slice.
+5. Run tests, plan-status checks, link checks, and dead-code validation before closing the slice.
 6. Repo-local governance helpers such as `scripts/meta/merge_pr.py` must stay
    aligned with the sanctioned worktree contract. The current helper uses
    rename-safe, path-based cleanup when a merged branch name no longer matches
    the worktree directory created earlier in the flow.
+7. Treat `dead_code_audit.json` as reviewed governance state. Repo-local dead code should be deleted or integrated; retained findings need explicit reviewed dispositions.
 
 ## Machine-Readable Governance
 

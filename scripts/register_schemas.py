@@ -22,15 +22,9 @@ try:
     from prompt_eval.experiment import (
         EvalResult,
         Experiment,
-        ExperimentInput,
-        PromptVariant,
-        Trial,
-        VariantSummary,
     )
     from prompt_eval.scoring import (
-        CriterionScore,
         Rubric,
-        RubricCriterion,
         ScoreResult,
     )
     from prompt_eval.optimize import (
@@ -38,11 +32,6 @@ try:
         OptimizeResult,
         SearchSpace,
     )
-    from prompt_eval.evaluators import (
-        DimensionScore,
-        JudgeVerdict,
-    )
-    from prompt_eval.golden_set import JudgeDecision
     print("Imported prompt_eval models")
 except ImportError as e:
     print(f"prompt_eval import failed: {e}")

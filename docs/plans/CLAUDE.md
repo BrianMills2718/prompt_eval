@@ -51,6 +51,11 @@ current example is the rename-safe `merge_pr.py` cleanup replay, which keeps
 `prompt_eval` aligned with the shared worktree contract without widening repo
 scope.
 
+The current governance baseline also includes reviewed dead-code audit
+enforcement. Retained dead-code findings must live in `dead_code_audit.json`
+with explicit dispositions; this is repo hygiene and framework-consumer
+alignment, not a new product lane.
+
 ## Trivial Changes
 
 Not every edit needs a plan. `[Trivial]` is appropriate for changes like:
@@ -63,4 +68,4 @@ Not every edit needs a plan. `[Trivial]` is appropriate for changes like:
 Avoid calling something trivial if it changes `prompt_eval/`, the public docs
 contract, or plan/uncertainty status.
 
-<!-- Governance refresh: 2026-04-05 — enforced_planning contract current -->
+<!-- Governance refresh: 2026-04-09 — enforced_planning contract current -->

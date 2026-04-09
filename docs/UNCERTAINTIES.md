@@ -110,4 +110,16 @@ a future program requires them.
 **Verified in:** `docs/adr/0007-paired-by-input-comparison-mode.md`,
 `docs/plans/08_paired-by-input-comparison-mode.md`, `prompt_eval.stats`
 
-<!-- Governance refresh: 2026-04-05 — enforced_planning contract current -->
+### U8: Should Judge Evaluator Timeout Parameters Remain Compatibility Shims?
+
+**Status:** ✅ Resolved
+**Raised:** 2026-04-09
+**Resolved:** 2026-04-09
+**Resolution:** evaluator-level `timeout` parameters remain part of the public
+surface and now forward through `prompt_eval.scoring` into
+`llm_client.acall_llm_structured(...)` instead of sitting unused as inert
+compatibility placeholders.
+**Verified in:** `prompt_eval.evaluators`, `prompt_eval.scoring`,
+`tests/test_evaluators.py`
+
+<!-- Governance refresh: 2026-04-09 — enforced_planning contract current -->

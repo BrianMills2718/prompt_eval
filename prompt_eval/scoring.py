@@ -248,6 +248,7 @@ async def ascore_output(
     agent_spec: str | None = None,
     prompt_id: str | None = None,
     git_commit: str | None = None,
+    timeout: int | None = None,
 ) -> ScoreResult:
     """Score a task output against a rubric.
 
@@ -262,6 +263,7 @@ async def ascore_output(
         output_model: Model that produced the output (for attribution)
         agent_spec: Agent architecture that produced the output (for attribution)
         prompt_id: Prompt version that produced the output (for attribution)
+        timeout: Optional judge-call timeout forwarded to llm_client.
 
     Returns:
         ScoreResult with overall_score (0.0-1.0), per-criterion scores, reasoning
@@ -314,6 +316,7 @@ async def ascore_output(
         task="scoring",
         trace_id=trace_id,
         max_budget=0,
+        timeout=timeout,
     )
     latency = time.monotonic() - t0
     judge_cost = meta.cost or 0.0
@@ -380,6 +383,7 @@ async def ascore_output_multi_judge(
     context: dict[str, Any] | str = "",
     task: str | None = None,
     trace_id: str | None = None,
+    timeout: int | None = None,
 ) -> ScoreResult:
     """Score output using multiple judge models and average their scores.
 
@@ -395,6 +399,7 @@ async def ascore_output_multi_judge(
         context: Task context shown to judges.
         task: Task tag for observability DB.
         trace_id: Trace ID for correlation.
+        timeout: Optional timeout forwarded to each judge call.
 
     Returns:
         ScoreResult with averaged scores across all judges.
@@ -419,6 +424,7 @@ async def ascore_output_multi_judge(
                 task=task,
                 trace_id=trace_id,
                 judge_model=model,
+                timeout=timeout,
             )
             results.append(result)
         except Exception as e:
