@@ -55,6 +55,10 @@ The current governance baseline also includes reviewed dead-code audit
 enforcement. Retained dead-code findings must live in `dead_code_audit.json`
 with explicit dispositions; this is repo hygiene and framework-consumer
 alignment, not a new product lane.
+That same sanctioned baseline now includes publish-safety and concern-routing
+helpers: `python scripts/check_push_safety.py --json` before first push, plus
+explicit review claims / routed concerns when one lane needs to challenge
+another.
 
 ## Trivial Changes
 
@@ -68,4 +72,4 @@ Not every edit needs a plan. `[Trivial]` is appropriate for changes like:
 Avoid calling something trivial if it changes `prompt_eval/`, the public docs
 contract, or plan/uncertainty status.
 
-<!-- Governance refresh: 2026-04-09 — enforced_planning contract current -->
+<!-- Governance refresh: 2026-04-09 — enforced_planning contract current, including push-safety and concern-routing helpers -->

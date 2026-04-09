@@ -22,6 +22,11 @@ backend.
   `prompt_eval` uses governed dead-code audit tooling and a reviewed
   `dead_code_audit.json`, but that does not make dead-code policy or framework
   ownership part of the package's product boundary.
+- Repo-local branch publishing follows the same consumer pattern too:
+  `prompt_eval` consumes governed push-safety, review-claim, and concern-routing
+  helpers from `enforced-planning` so claimed worktree branches can publish and
+  challenge each other safely without turning workflow policy into package
+  scope.
 - Local JSON persistence in `prompt_eval.store` remains available as a
   compatibility/export path, but the authoritative shared record is
   `llm_client` observability.

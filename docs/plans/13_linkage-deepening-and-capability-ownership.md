@@ -145,3 +145,6 @@ The linkage surface established here also covers later bounded workflow-helper
 replays. In particular, the local workflow contract now expects rename-safe
 `scripts/meta/merge_pr.py` cleanup so branch-renamed worktrees are removed by
 discovered path rather than a reconstructed branch-derived path.
+The same follow-on maintenance rule now covers push-safety, review-claim,
+concern-routing, and worktree-aware dead-code helper updates when the shared
+sanctioned-worktree contract evolves upstream.

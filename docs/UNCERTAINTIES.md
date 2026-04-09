@@ -14,6 +14,9 @@ only for open or resolved architecture questions, not for sequencing work.
 2. `llm_client` remains the authoritative shared observability backend.
 3. Local JSON result files can continue to exist as artifacts during migration.
 4. Prompt identity should move toward explicit asset references when available.
+5. Governed workflow helpers such as reviewed dead-code audit, push-safety,
+   review claims, and concern routing remain consumed coordination surfaces,
+   not product capabilities owned by `prompt_eval`.
 
 ## Open Questions
 

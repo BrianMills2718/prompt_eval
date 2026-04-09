@@ -182,3 +182,7 @@ exceptions.
 - later shared-helper maintenance may still replay into this repo without
   reopening Plan 12. The current bounded example is rename-safe `merge_pr.py`
   cleanup so branch-renamed worktrees release and remove correctly.
+- that same governed-helper replay model now also covers push-safety,
+  review-claim, and concern-routing surfaces plus worktree-aware dead-code
+  interpreter reuse; these are workflow-consumer upgrades, not reopened package
+  scope.

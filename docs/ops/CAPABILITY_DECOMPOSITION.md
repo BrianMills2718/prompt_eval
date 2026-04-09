@@ -40,6 +40,9 @@ projects.
 The repo now also consumes the governed dead-code audit contract from
 `enforced-planning`. That reviewed audit state is a repo-governance surface,
 not a product capability owned by `prompt_eval`.
+The same is true for governed push-safety, review-claim, and concern-routing
+helpers: they protect worktree publication and cross-lane review, but they do
+not expand the repo's product capability boundary.
 
 ## Capability Ledger
 
@@ -81,4 +84,4 @@ when there is a real integration or a maintained dependency.
 - Some evaluator and optimization helpers still look repo-local in adoption
   practice even when the long-term intent is shared use.
 
-<!-- Governance refresh: 2026-04-09 — enforced_planning contract current -->
+<!-- Governance refresh: 2026-04-09 — enforced_planning contract current, including push-safety and concern-routing helpers -->

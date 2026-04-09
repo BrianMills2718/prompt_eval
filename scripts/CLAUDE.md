@@ -9,6 +9,8 @@ automation.
 |--------|---------|
 | `scripts/check_markdown_links.py` | Verify local documentation links |
 | `scripts/check_doc_coupling.py` | Verify coupled docs were updated with linked source changes |
+| `scripts/check_dead_code.py` | Run reviewed dead-code detection with repo-local venv fallback |
+| `scripts/check_push_safety.py` | Verify branch cleanliness, claim coverage, and publish safety |
 | `scripts/check_truth_surface_drift.py` | Run deterministic scoped truth-surface drift validation |
 | `scripts/render_truth_surface_status.py` | Render the compact truth-surface operator status |
 | `scripts/review_truth_surface_semantic.py` | Run optional advisory semantic review on truth surfaces |
@@ -33,6 +35,10 @@ still assume conventions that `prompt_eval` does not fully enforce.
 `scripts/meta/merge_pr.py` now uses rename-safe cleanup semantics: when a
 branch is renamed after the worktree is created, cleanup targets the discovered
 worktree path first instead of reconstructing a path from the branch name.
+The sanctioned worktree helper set also now includes
+`scripts/meta/worktree-coordination/create_review_claim.py` and
+`scripts/meta/worktree-coordination/raise_concern.py` so review concerns are
+visible through explicit claims and routed feedback instead of ad hoc chat.
 
 ## Current Limits
 
