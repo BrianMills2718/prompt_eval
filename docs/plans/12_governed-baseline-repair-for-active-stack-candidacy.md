@@ -186,3 +186,7 @@ exceptions.
   review-claim, and concern-routing surfaces plus worktree-aware dead-code
   interpreter reuse; these are workflow-consumer upgrades, not reopened package
   scope.
+- the governed helper replay model now also covers repo-local `hooks/pre-push`
+  plus `make publish-check`, with stricter repo-specific publish checks living
+  behind an optional `publish-check-extra` target instead of assuming
+  `make check` is publish-clean in every governed consumer.

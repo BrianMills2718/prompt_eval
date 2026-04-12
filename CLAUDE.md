@@ -21,6 +21,7 @@ ruff check prompt_eval tests
 make dead-code
 make dead-code-audit
 make dead-code-validate
+make publish-check
 python scripts/check_push_safety.py --json
 python scripts/check_markdown_links.py CLAUDE.md docs/plans/CLAUDE.md scripts/CLAUDE.md
 ```
@@ -46,6 +47,7 @@ python scripts/check_markdown_links.py CLAUDE.md docs/plans/CLAUDE.md scripts/CL
 ## Workflow
 
 **Governance install (2026-04-05):** `enforced_planning` governed-repo contract refreshed — worktree coordination scripts and Makefile.worktree up to date. Classification: `governed`.
+**Governance publish contract (2026-04-12):** repo-local `hooks/` and `make publish-check` are now part of the governed baseline. Publish enforcement now covers claim-safe branch push plus reviewed dead-code by default, with any stricter repo-local publish gate living behind `publish-check-extra`.
 
 1. Read `CLAUDE.md`, `README.md`, and the active roadmap or uncertainty docs
    before changing repo behavior.
@@ -54,9 +56,10 @@ python scripts/check_markdown_links.py CLAUDE.md docs/plans/CLAUDE.md scripts/CL
    `prompt_eval` versus `llm_client` boundary, document the decision.
 4. Edit `CLAUDE.md` first, then resync `AGENTS.md`. Do not hand-maintain two
    divergent instruction files.
-5. Run tests, plan-status checks, link checks, dead-code validation, and
-   `python scripts/check_push_safety.py --json` before closing or publishing a
-   worktree slice.
+5. Run tests, plan-status checks, link checks, and dead-code validation before
+   closing a worktree slice. Before publishing, run `make publish-check` so the
+   sanctioned push-safety and reviewed-dead-code gate matches the repo-local
+   pre-push hook.
 6. Repo-local governance helpers such as `scripts/check_push_safety.py`,
    `scripts/meta/worktree-coordination/create_review_claim.py`,
    `scripts/meta/worktree-coordination/raise_concern.py`, and

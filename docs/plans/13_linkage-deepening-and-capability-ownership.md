@@ -148,3 +148,7 @@ discovered path rather than a reconstructed branch-derived path.
 The same follow-on maintenance rule now covers push-safety, review-claim,
 concern-routing, and worktree-aware dead-code helper updates when the shared
 sanctioned-worktree contract evolves upstream.
+It also now covers repo-local publish-hook alignment: `make publish-check`
+tracks the governed push/dead-code baseline, while any stricter repo-local gate
+must live behind `publish-check-extra` rather than being assumed by the shared
+framework contract.

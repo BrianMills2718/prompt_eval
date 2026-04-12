@@ -39,6 +39,9 @@ The sanctioned worktree helper set also now includes
 `scripts/meta/worktree-coordination/create_review_claim.py` and
 `scripts/meta/worktree-coordination/raise_concern.py` so review concerns are
 visible through explicit claims and routed feedback instead of ad hoc chat.
+Repo-local git hooks now call `make publish-check`, which enforces push safety
+and reviewed dead-code by default and defers any stricter repo-specific publish
+gate to an optional `publish-check-extra` target.
 
 ## Current Limits
 
