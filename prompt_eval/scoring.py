@@ -276,7 +276,7 @@ async def ascore_output(
 
     # Resolve judge model
     if judge_model is None:
-        from llm_client.models import get_model
+        from llm_client import get_model
 
         judge_model = get_model("judging")
 

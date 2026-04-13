@@ -202,7 +202,7 @@ def test_invalid_primary_result_fails_loudly(db_path: Path) -> None:
         return object()
 
     gsm = GoldenSetManager(
-        primary_evaluator=invalid_primary,
+        primary_evaluator=invalid_primary,  # type: ignore[arg-type]
         fallback_judge=_always_reasonable_judge,
         db_path=db_path,
     )

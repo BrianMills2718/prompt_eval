@@ -1,5 +1,6 @@
 """Tests for prompt asset helpers and prompt_eval integration."""
 
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -47,8 +48,9 @@ class TestBuildPromptVariantFromRef:
         )
 
     def test_requires_explicit_model(self) -> None:
+        build_variant: Any = build_prompt_variant_from_ref
         with pytest.raises(TypeError, match="model"):
-            build_prompt_variant_from_ref(
+            build_variant(
                 name="shared_bullet_variant",
                 prompt_ref="shared.summarize.bullet@1",
                 render_context={"bullet_count": 3},

@@ -190,3 +190,7 @@ exceptions.
   plus `make publish-check`, with stricter repo-specific publish checks living
   behind an optional `publish-check-extra` target instead of assuming
   `make check` is publish-clean in every governed consumer.
+- `prompt_eval` now consumes that stricter repo-local gate too: its
+  `publish-check-extra` path runs `make check`, with canonical-repo `.venv`
+  and sibling `llm_client` source resolution so worktree-local mypy stays
+  truthful instead of depending on shell `PATH`.

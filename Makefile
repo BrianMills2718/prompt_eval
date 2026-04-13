@@ -258,23 +258,32 @@ endif
 # <<< META-PROCESS WORKTREE TARGETS <<<
 
 # --- During Implementation ---
-.PHONY: test test-quick check
+.PHONY: test test-quick publish-check-extra check
+
+CANONICAL_REPO_ROOT := $(shell common_dir="$$(git -C "$(CURDIR)" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"; if [ -n "$$common_dir" ]; then dirname "$$common_dir"; else printf '%s\n' "$(CURDIR)"; fi)
+REPO_PYTHON := $(if $(wildcard $(CANONICAL_REPO_ROOT)/.venv/bin/python),$(CANONICAL_REPO_ROOT)/.venv/bin/python,python3)
+LLM_CLIENT_ROOT := $(abspath $(CANONICAL_REPO_ROOT)/../llm_client)
 
 test:  ## Run pytest
-	pytest tests/ -v
+	$(REPO_PYTHON) -m pytest tests/ -v
 
 test-quick:  ## Run pytest (no traceback)
-	pytest tests/ -q --tb=no
+	$(REPO_PYTHON) -m pytest tests/ -q --tb=no
 
 check:  ## Run all checks (test, mypy, lint)
+	@if [ ! -d "$(LLM_CLIENT_ROOT)/llm_client" ]; then \
+		echo "Missing sibling llm_client checkout at $(LLM_CLIENT_ROOT)"; \
+		echo "prompt_eval publish-check-extra requires llm_client source for mypy import resolution."; \
+		exit 1; \
+	fi
 	@echo "Running tests..."
-	@pytest tests/ -q --tb=short
+	@$(REPO_PYTHON) -m pytest tests/ -q --tb=short
 	@echo ""
 	@echo "Running mypy..."
-	@mypy prompt_eval tests
+	@MYPYPATH="$(LLM_CLIENT_ROOT)" $(REPO_PYTHON) -m mypy prompt_eval tests
 	@echo ""
 	@echo "Running ruff..."
-	@ruff check prompt_eval tests
+	@$(REPO_PYTHON) -m ruff check prompt_eval tests
 	@echo ""
 	@echo "All checks passed!"
 
@@ -368,6 +377,9 @@ publish-check:  ## Run the governed publish gate (coordination, repo checks, rev
 	@if $(MAKE) -n publish-check-extra >/dev/null 2>&1; then \
 		$(MAKE) publish-check-extra; \
 	fi
+
+publish-check-extra:  ## Run repo-local publish blockers beyond the shared governed gate
+	@$(MAKE) check
 # <<< META-PROCESS PUBLISH TARGETS <<<
 
 # --- Help ---

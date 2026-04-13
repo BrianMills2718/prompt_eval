@@ -60,6 +60,9 @@ helpers plus repo-local publish hooks: use `make publish-check` before push,
 with explicit review claims / routed concerns when one lane needs to challenge
 another. Repo-specific stricter publish gates belong behind
 `publish-check-extra`, not in ad hoc shell steps.
+`prompt_eval` now uses that stricter lane too: `publish-check-extra` runs
+`make check`, and the Makefile resolves the canonical repo `.venv` plus the
+sibling `llm_client` checkout so the gate stays truthful from worktrees.
 
 ## Trivial Changes
 

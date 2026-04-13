@@ -152,3 +152,7 @@ It also now covers repo-local publish-hook alignment: `make publish-check`
 tracks the governed push/dead-code baseline, while any stricter repo-local gate
 must live behind `publish-check-extra` rather than being assumed by the shared
 framework contract.
+`prompt_eval` now exercises that stricter path directly: its
+`publish-check-extra` target runs `make check`, and the Makefile resolves the
+canonical repo `.venv` plus sibling `llm_client` source so the hook and the
+interactive worktree path enforce the same mypy contract.

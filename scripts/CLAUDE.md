@@ -42,6 +42,9 @@ visible through explicit claims and routed feedback instead of ad hoc chat.
 Repo-local git hooks now call `make publish-check`, which enforces push safety
 and reviewed dead-code by default and defers any stricter repo-specific publish
 gate to an optional `publish-check-extra` target.
+`prompt_eval` now opts into that stricter gate: its `publish-check-extra`
+target runs `make check`, and the Makefile resolves the canonical repo `.venv`
+plus the sibling `llm_client` source tree so mypy remains worktree-safe.
 
 ## Current Limits
 

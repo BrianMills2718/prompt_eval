@@ -18,6 +18,7 @@ python scripts/meta/check_plan_blockers.py --strict
 python scripts/meta/check_plan_tests.py --plan 1
 mypy prompt_eval tests
 ruff check prompt_eval tests
+make check
 make dead-code
 make dead-code-audit
 make dead-code-validate
@@ -48,6 +49,7 @@ python scripts/check_markdown_links.py CLAUDE.md docs/plans/CLAUDE.md scripts/CL
 
 **Governance install (2026-04-05):** `enforced_planning` governed-repo contract refreshed — worktree coordination scripts and Makefile.worktree up to date. Classification: `governed`.
 **Governance publish contract (2026-04-12):** repo-local `hooks/` and `make publish-check` are now part of the governed baseline. Publish enforcement now covers claim-safe branch push plus reviewed dead-code by default, with any stricter repo-local publish gate living behind `publish-check-extra`.
+**Publish-check-extra graduation (2026-04-12):** `prompt_eval` now opts into the stricter repo-local publish gate. `make check` resolves the canonical repo `.venv` plus the sibling `llm_client` checkout so mypy stays truthful from worktrees and hooks.
 
 1. Read `CLAUDE.md`, `README.md`, and the active roadmap or uncertainty docs
    before changing repo behavior.
