@@ -1,0 +1,16 @@
+version: 1
+project: prompt_eval
+publish:
+  - path: README.md
+    type: ProjectOverview
+    title: Prompt Eval Overview
+    tags: [portfolio, shared-infrastructure, evaluation]
+  - path: docs/API_REFERENCE.md
+    type: APIReference
+    tags: [evaluation, api]
+  - path: experiments/deepeval_comparison.md
+    type: EvaluationReport
+    tags: [evaluation, benchmark]
+exclude:
+  - .pytest_cache/**
+  - docs/wiki_manifest.yaml
