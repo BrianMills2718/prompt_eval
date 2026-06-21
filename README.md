@@ -237,6 +237,8 @@ for the compact operator status view. It still does not maintain a formal
   repo-local capability ownership source of record
 - [docs/ops/TRUTH_SURFACE_STATUS.md](docs/ops/TRUTH_SURFACE_STATUS.md): current
   scoped truth-surface status view for this repo
+- [docs/ops/METHODOLOGY_REVIEW_CASE_SET.md](docs/ops/METHODOLOGY_REVIEW_CASE_SET.md):
+  frozen case set for scoring methodology-whitepaper review outputs
 - [docs/UNCERTAINTIES.md](docs/UNCERTAINTIES.md): unresolved architecture and
   scope questions
 - [docs/adr/README.md](docs/adr/README.md): architecture decision record index

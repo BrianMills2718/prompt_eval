@@ -1,0 +1,163 @@
+{
+  "outputs": [
+    {
+      "variant_name": "gold_reference",
+      "input_id": "good_preserves_time_and_modality",
+      "replicate": 0,
+      "subject_model": "gold",
+      "output": {
+        "artifact_label": "good_preserves_time_and_modality",
+        "verdict": "pass",
+        "summary": "No correctness defect found.",
+        "correctness_findings": [],
+        "contract_violations": [],
+        "nits": [],
+        "unverified_claims": [],
+        "scope_drift_findings": [],
+        "reviewer_model": "gold",
+        "profile_annotations": []
+      }
+    },
+    {
+      "variant_name": "gold_reference",
+      "input_id": "good_rejects_presentation_only_additions",
+      "replicate": 0,
+      "subject_model": "gold",
+      "output": {
+        "artifact_label": "good_rejects_presentation_only_additions",
+        "verdict": "pass",
+        "summary": "The presentation-only additions are correctly rejected.",
+        "correctness_findings": [],
+        "contract_violations": [],
+        "nits": [],
+        "unverified_claims": [],
+        "scope_drift_findings": [],
+        "reviewer_model": "gold",
+        "profile_annotations": [
+          {
+            "annotation_id": "sp1",
+            "kind": "spurious",
+            "claim": "Add dashboards, sector taxonomies, or exhaustive predicate tables.",
+            "why_rejected_or_uncertain": "These additions do not change semantic event equivalence."
+          }
+        ]
+      }
+    },
+    {
+      "variant_name": "gold_reference",
+      "input_id": "defect_erases_time_and_modality",
+      "replicate": 0,
+      "subject_model": "gold",
+      "output": {
+        "artifact_label": "defect_erases_time_and_modality",
+        "verdict": "blocker",
+        "summary": "The method erases fields required by the formal definition.",
+        "correctness_findings": [
+          {
+            "file_path": "case.md",
+            "line": 1,
+            "claim": "Deleting time and modality before comparison makes a 2024 asserted event and a 2025 hypothetical event a false positive.",
+            "severity": "high"
+          }
+        ],
+        "contract_violations": [],
+        "nits": [],
+        "unverified_claims": [],
+        "scope_drift_findings": [],
+        "reviewer_model": "gold",
+        "profile_annotations": [
+          {
+            "annotation_id": "og1",
+            "kind": "optimum_gap",
+            "claim": "Compare typed fields separately, including temporal interval and factuality.",
+            "linked_finding_index": 0,
+            "validity_loss_without_change": "Without field-level temporal and factuality comparison, the method cannot prevent false positives."
+          }
+        ]
+      }
+    },
+    {
+      "variant_name": "gold_reference",
+      "input_id": "defect_determinism_claimed_as_validity",
+      "replicate": 0,
+      "subject_model": "gold",
+      "output": {
+        "artifact_label": "defect_determinism_claimed_as_validity",
+        "verdict": "blocker",
+        "summary": "Determinism does not establish validity.",
+        "correctness_findings": [
+          {
+            "file_path": "case.md",
+            "line": 1,
+            "claim": "The validation section mistakes deterministic output for validity and omits calibration.",
+            "severity": "high"
+          }
+        ],
+        "contract_violations": [],
+        "nits": [],
+        "unverified_claims": [],
+        "scope_drift_findings": [],
+        "reviewer_model": "gold",
+        "profile_annotations": [
+          {
+            "annotation_id": "og1",
+            "kind": "optimum_gap",
+            "claim": "Evaluate against gold labels and report precision and recall.",
+            "linked_finding_index": 0,
+            "validity_loss_without_change": "Without gold labels, precision, and recall, the method cannot show that deterministic decisions track the true equivalence predicate."
+          }
+        ]
+      }
+    },
+    {
+      "variant_name": "gold_reference",
+      "input_id": "spurious_dashboard_trap",
+      "replicate": 0,
+      "subject_model": "gold",
+      "output": {
+        "artifact_label": "spurious_dashboard_trap",
+        "verdict": "pass",
+        "summary": "Dashboard machinery is not a validity lever for this section.",
+        "correctness_findings": [],
+        "contract_violations": [],
+        "nits": [],
+        "unverified_claims": [],
+        "scope_drift_findings": [],
+        "reviewer_model": "gold",
+        "profile_annotations": [
+          {
+            "annotation_id": "sp1",
+            "kind": "spurious",
+            "claim": "Add a dashboard.",
+            "why_rejected_or_uncertain": "A dashboard does not change the semantic equivalence judgment."
+          }
+        ]
+      }
+    },
+    {
+      "variant_name": "gold_reference",
+      "input_id": "spurious_exhaustive_taxonomy_trap",
+      "replicate": 0,
+      "subject_model": "gold",
+      "output": {
+        "artifact_label": "spurious_exhaustive_taxonomy_trap",
+        "verdict": "pass",
+        "summary": "The sector taxonomy is correctly rejected as non-validity machinery.",
+        "correctness_findings": [],
+        "contract_violations": [],
+        "nits": [],
+        "unverified_claims": [],
+        "scope_drift_findings": [],
+        "reviewer_model": "gold",
+        "profile_annotations": [
+          {
+            "annotation_id": "sp1",
+            "kind": "spurious",
+            "claim": "Add an exhaustive industry-sector taxonomy.",
+            "why_rejected_or_uncertain": "Sector taxonomy labels are irrelevant to whether two reports assert the same event."
+          }
+        ]
+      }
+    }
+  ]
+}
