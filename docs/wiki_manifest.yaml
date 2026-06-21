@@ -5,6 +5,10 @@ publish:
     type: ProjectOverview
     title: Prompt Eval Overview
     tags: [portfolio, shared-infrastructure, evaluation]
+  - path: docs/PORTFOLIO_EXPERIMENT_SUMMARY.md
+    type: PortfolioGuide
+    title: Prompt Eval Portfolio Experiment Summary
+    tags: [portfolio, evaluation, prompt-engineering]
   - path: docs/API_REFERENCE.md
     type: APIReference
     tags: [evaluation, api]
