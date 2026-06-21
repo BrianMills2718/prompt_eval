@@ -24,8 +24,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
+        env:
+          LLM_CLIENT_REPO_TOKEN: ${{ secrets.LLM_CLIENT_REPO_TOKEN }}
         run: |
           pip install --upgrade pip
+          if [ -z "${LLM_CLIENT_REPO_TOKEN}" ]; then
+            echo "::error::prompt_eval CI requires LLM_CLIENT_REPO_TOKEN while BrianMills2718/llm_client is private for issue #30 containment."
+            exit 1
+          fi
+          git config --global url."https://x-access-token:${LLM_CLIENT_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+          pip install git+https://github.com/BrianMills2718/llm_client.git
           pip install -e ".[dev]"
 
       - name: Lint with ruff
