@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "id": "good_preserves_time_and_modality",
+      "title": "Known-good tuple method preserves time and modality",
+      "category": "known_good",
+      "artifact_section": "The method extracts (actor, action, object, time, factuality) from each report. It normalizes time to intervals, classifies factuality as asserted, negated, hypothetical, or reported, and emits same_event only when all fields are equivalent. Validation uses adjudicated examples that differ only in time or factuality.",
+      "expected": {
+        "max_actionable_findings": 0
+      }
+    },
+    {
+      "id": "good_rejects_presentation_only_additions",
+      "title": "Known-good method explicitly rejects presentation-only additions",
+      "category": "known_good",
+      "artifact_section": "The method compares field-level event semantics and calibrates confidence against gold labels. It explicitly rejects adding dashboards, sector taxonomies, and exhaustive predicate tables because none of those additions changes whether two event claims are semantically equivalent.",
+      "expected": {
+        "max_actionable_findings": 0
+      }
+    },
+    {
+      "id": "defect_erases_time_and_modality",
+      "title": "Defect erases fields required by the formal definition",
+      "category": "known_defective",
+      "artifact_section": "An event claim is (actor, action, object, time, factuality). The procedure deletes all dates and modality words, then compares the remaining lowercase tokens. Delta signed in 2024 and Delta might sign in 2025 are marked same_event.",
+      "expected": {
+        "required_defect_terms": ["time", "modality", "false positive"],
+        "required_optimum_gap_terms": ["field", "factuality", "temporal"]
+      }
+    },
+    {
+      "id": "defect_determinism_claimed_as_validity",
+      "title": "Defect treats determinism as validation",
+      "category": "known_defective",
+      "artifact_section": "The equivalence system emits confidence 1.0 for every exact token match and 0.0 otherwise. No calibration or gold labels are needed because the procedure is deterministic.",
+      "expected": {
+        "required_defect_terms": ["deterministic", "calibration", "validity"],
+        "required_optimum_gap_terms": ["gold", "precision", "recall"]
+      }
+    },
+    {
+      "id": "spurious_dashboard_trap",
+      "title": "Spurious trap for dashboard additions",
+      "category": "spurious_trap",
+      "artifact_section": "The methodology correctly extracts typed event fields and validates against adjudicated pairs. A reviewer may be tempted to demand a monitoring dashboard, but the absence of a dashboard does not change the semantic equivalence decision.",
+      "expected": {
+        "spurious_trap_terms": ["dashboard"],
+        "expected_spurious_terms": ["dashboard"]
+      }
+    },
+    {
+      "id": "spurious_exhaustive_taxonomy_trap",
+      "title": "Spurious trap for exhaustive taxonomy additions",
+      "category": "spurious_trap",
+      "artifact_section": "The methodology compares typed event fields with calibrated uncertainty. A reviewer may be tempted to demand an exhaustive industry-sector taxonomy, but sector labels are irrelevant to whether two reports assert the same event.",
+      "expected": {
+        "spurious_trap_terms": ["taxonomy", "sector"],
+        "expected_spurious_terms": ["taxonomy", "sector"]
+      }
+    }
+  ]
+}

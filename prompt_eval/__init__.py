@@ -22,6 +22,15 @@ from prompt_eval.agent_spec import (
     load_agent_spec,
     validate_agent_spec,
 )
+from prompt_eval.case_sets.methodology_whitepaper_review import (
+    MethodologyReviewCase,
+    MethodologyReviewExpectation,
+    load_methodology_review_baseline_outputs,
+    load_methodology_review_cases,
+    methodology_review_evaluator,
+    methodology_review_inputs,
+    summarize_methodology_review_trials,
+)
 from prompt_eval.experiment import (
     EvalResult,
     Experiment,
@@ -115,6 +124,14 @@ __all__ = [
     "REQUIRED_AGENT_SPEC_SECTIONS",
     "load_agent_spec",
     "validate_agent_spec",
+    # Case Sets
+    "MethodologyReviewCase",
+    "MethodologyReviewExpectation",
+    "load_methodology_review_baseline_outputs",
+    "load_methodology_review_cases",
+    "methodology_review_evaluator",
+    "methodology_review_inputs",
+    "summarize_methodology_review_trials",
     # Optimization
     "optimize",
     "grid_search",
