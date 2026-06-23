@@ -1,6 +1,10 @@
 version: 1
 project: prompt_eval
 publish:
+  - path: PROJECT.md
+    type: ProjectDossier
+    title: Prompt Eval Project Dossier
+    tags: [portfolio, shared-infrastructure, evaluation, dossier]
   - path: README.md
     type: ProjectOverview
     title: Prompt Eval Overview
@@ -9,6 +13,26 @@ publish:
     type: PortfolioGuide
     title: Prompt Eval Portfolio Experiment Summary
     tags: [portfolio, evaluation, prompt-engineering]
+  - path: docs/METHODOLOGY.md
+    type: Methodology
+    title: Prompt Eval Methodology
+    tags: [portfolio, evaluation, methodology]
+  - path: docs/ARTIFACTS.md
+    type: ArtifactRegister
+    title: Prompt Eval Artifact Register
+    tags: [portfolio, evaluation, artifacts]
+  - path: docs/VALIDATION.md
+    type: Validation
+    title: Prompt Eval Validation Register
+    tags: [portfolio, evaluation, validation]
+  - path: docs/CONCERNS.md
+    type: ConcernRegister
+    title: Prompt Eval Concern Register
+    tags: [portfolio, evaluation, concerns]
+  - path: docs/adr/0008-portfolio-prompt-eval-evidence-boundary.md
+    type: ADR
+    title: Present Prompt Eval Through Applied Experiment Evidence
+    tags: [evaluation, shared-infrastructure, architecture]
   - path: docs/API_REFERENCE.md
     type: APIReference
     tags: [evaluation, api]
